@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "dicey.home",
+  "name": "Dicey Home",
+  "version": "2.0.3",
+  "author": "Dicey",
+  "description": "A themed command palette and native Dicey Home with apps, activity, media, browser-default search, and arithmetic",
+  "kinds": ["menu", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {"menu": "Launcher.qml", "barWidget": "BarWidget.qml"},
+  "barWidget": {
+    "displayName": "Dicey Home",
+    "description": "Open the command palette",
+    "category": "Compositor",
+    "allowMultiple": false
+  },
+  "omarchy": {"clonedFrom": "omarchy.menu"}
+}
