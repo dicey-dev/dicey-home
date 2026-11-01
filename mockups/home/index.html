@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Dicey Home — an Omarchy concept</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="../../Search.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body data-view="control" data-theme="miasma">
+  <a class="skip-link" href="#home-search">Skip to search</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 6 6 6-6 6M13 18h7"/></symbol>
+      <symbol id="i-editor" viewBox="0 0 24 24"><path d="M4 20V4l16 16V4M4 4l7 6M20 20l-7-6"/></symbol>
+      <symbol id="i-browser" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V4h7l3 3h8v13H3z"/></symbol>
+      <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 19 19 5M7 5h12v12"/></symbol>
+      <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8 16a6 6 0 0 1 8 0"/><circle cx="12" cy="20" r=".6"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3zM16 9l6 6M22 9l-6 6"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11Z"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="1"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8Z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="m5 5 11 7-11 7ZM19 5v14"/></symbol>
+      <symbol id="i-previous" viewBox="0 0 24 24"><path d="m19 5-11 7 11 7ZM5 5v14"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4 4l2 2M18 18l2 2M20 4l-2 2M6 18l-2 2"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="shell-bar" aria-label="Omarchy bar preview">
+    <div class="bar-island workspace-island">
+      <button class="bar-home" data-switch="control" aria-label="Open Dicey Home"><svg class="icon"><use href="#i-grid"/></svg></button>
+      <span class="bar-rule"></span>
+      <button class="workspace-number" aria-label="Workspace 1">1</button><button class="workspace-number active" aria-label="Workspace 2" aria-current="true">2</button><button class="workspace-number" aria-label="Workspace 3">3</button><button class="workspace-number" aria-label="Workspace 4">4</button><span class="workspace-ellipsis">· · ·</span>
+    </div>
+    <div class="bar-island clock-island"><span id="bar-date">Sunday</span><span id="bar-time">15:42</span></div>
+    <div class="bar-island status-island"><svg class="icon small"><use href="#i-wifi"/></svg><svg class="icon small"><use href="#i-volume"/></svg><span class="battery"><i></i></span><span>100%</span></div>
+  </header>
+
+  <div class="desktop-backdrop" aria-hidden="true">
+    <div class="desktop-terminal"><div class="window-chrome"><span>~ / Work</span><span>── □ ×</span></div><pre><span class="accent">❯</span> fastfetch
+
+     /\           divy@omarchy
+    /  \          ────────────
+   / /\ \         OS       Omarchy Quattro
+  / ____ \        WM       Hyprland
+ /_/    \_\       Shell    Quickshell
+
+<span class="accent">❯</span> <span class="cursor-block"> </span></pre></div>
+    <div class="desktop-wordmark">omarchy<span>your desktop. your rules.</span></div>
+  </div>
+
+  <main class="control-page" id="control-page">
+    <div class="page-toolbar">
+      <div class="eyebrow"><span class="small-square"></span>DICEY / DESKTOP EXPERIENCE <span class="concept-badge">CONCEPT 01</span></div>
+      <div class="toolbar-actions">
+        <label class="theme-control"><svg class="icon small"><use href="#i-sun"/></svg><span class="sr-only">Theme preview</span><select id="theme-select"><option value="miasma">Miasma</option><option value="tokyo">Tokyo Night</option><option value="catppuccin">Catppuccin</option><option value="everforest">Everforest</option><option value="paper">Light study</option></select></label>
+        <button class="text-button" id="customize-button">Edit tiles <span>↗</span></button>
+        <button class="mode-button" data-switch="launcher">Launcher <kbd>Ctrl ⇧ F</kbd></button>
+      </div>
+    </div>
+
+    <div class="page-heading">
+      <div><div class="date-line" id="long-date">SUNDAY, 11 OCTOBER</div><h1>Dicey Home<span class="title-period">.</span></h1><p class="intro">A place to start. A space to stay.</p></div>
+      <div class="profile"><div class="profile-copy"><strong>divy</strong><span>LOCAL SESSION / 02</span></div><span class="avatar" aria-label="D initials avatar">d<span class="online-dot"></span></span></div>
+    </div>
+
+    <div class="search-rail">
+      <svg class="icon"><use href="#i-search"/></svg><label class="sr-only" for="home-search">Search tiles, apps, or calculate</label><input id="home-search" type="search" placeholder="Search apps, commands, or calculate…" autocomplete="off" spellcheck="false"><kbd>/</kbd><span class="search-context">YOUR DESKTOP, INDEXED</span>
+    </div>
+    <div class="calculation" id="calculation" hidden><span>CALCULATOR</span><output id="calculation-answer"></output><button id="copy-answer">Copy answer ↗</button></div>
+
+    <div class="tile-canvas" id="tile-canvas">
+      <section class="tile-group workspace-group" aria-labelledby="workspace-heading">
+        <div class="group-heading"><h2 id="workspace-heading">Workspace</h2><span>01 / YOUR DAILY TOOLS</span></div>
+        <div class="tile-grid workspace-grid">
+          <button class="tile app-tile editor-tile wide tall" data-tile="editor" data-terms="editor neovim nvim vim code development" data-app="Editor" data-command="omarchy launch editor" data-nav><span class="tile-topline"><span>NEOVIM</span><span class="tile-corner">↗</span></span><svg class="app-icon editor-icon"><use href="#i-editor"/></svg><span class="tile-name">Pick up where<br>you left off.</span><span class="tile-bottomline"><span>Editor</span><span>~/Work</span></span></button>
+          <button class="tile app-tile" data-tile="terminal" data-terms="terminal shell bash tui alacritty" data-app="Terminal" data-command="omarchy launch terminal" data-nav><svg class="app-icon"><use href="#i-terminal"/></svg><span class="tile-bottomline"><span>Terminal</span><span>↗</span></span></button>
+          <button class="tile app-tile" data-tile="browser" data-terms="browser chrome chromium unduck web internet" data-app="Browser" data-command="omarchy launch browser" data-nav><svg class="app-icon"><use href="#i-browser"/></svg><span class="tile-bottomline"><span>Browser</span><span>↗</span></span></button>
+          <button class="tile app-tile" data-tile="files" data-terms="files folders nautilus file manager" data-app="Files" data-command="omarchy launch filemanager" data-nav><svg class="app-icon"><use href="#i-folder"/></svg><span class="tile-bottomline"><span>Files</span><span>↗</span></span></button>
+          <button class="tile app-tile notes-tile" data-tile="notes" data-terms="notes obsidian markdown write" data-app="Notes" data-command="obsidian" data-nav><svg class="app-icon"><use href="#i-note"/></svg><span class="tile-bottomline"><span>Notes</span><span>↗</span></span></button>
+        </div>
+      </section>
+
+      <section class="tile-group activity-group" aria-labelledby="activity-heading">
+        <div class="group-heading"><h2 id="activity-heading">The machine</h2><span>02 / A LITTLE PULSE</span></div>
+        <div class="tile-grid activity-grid">
+          <button class="tile activity-tile wide tall" data-tile="activity" data-terms="activity cpu ram memory processes monitoring btop htop system" data-action="monitor" data-nav>
+            <span class="tile-topline"><span><svg class="icon small"><use href="#i-terminal"/></svg> btop</span><span class="live-label"><i></i> LIVE STUDY</span></span>
+            <span class="cpu-overview"><span><span class="metric-label">CPU</span><strong><span id="cpu-number">24</span><small>%</small></strong></span><span class="cpu-meta">8 CORES / 16 THREADS<br><span id="cpu-temp">52</span>°C · 2.8 GHz</span></span>
+            <svg class="cpu-chart" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path class="chart-area" id="cpu-area" d="M0 50L0 35L20 40L40 28L60 34L80 15L100 30L120 26L140 35L160 20L180 28L200 8L220 30L240 21L260 34L280 20L300 28L320 14L340 30L360 24L380 35L400 29L400 60L0 60Z"/><polyline id="cpu-line" points="0,35 20,40 40,28 60,34 80,15 100,30 120,26 140,35 160,20 180,28 200,8 220,30 240,21 260,34 280,20 300,28 320,14 340,30 360,24 380,35 400,29"/></svg>
+            <span class="terminal-rails"><span><span class="metric-label">CPU 0</span><span class="segmented" id="core-one"></span><span id="core-one-number">32%</span></span><span><span class="metric-label">CPU 1</span><span class="segmented" id="core-two"></span><span id="core-two-number">18%</span></span><span><span class="metric-label">MEM</span><span class="segmented memory-segments"></span><span>8.4G</span></span></span>
+            <span class="tile-bottomline"><span>126 processes · 4 running</span><span>Expand TUI ↗</span></span>
+          </button>
+          <button class="tile network-tile" data-tile="network" data-terms="network internet download upload bandwidth monitoring" data-action="network" data-nav><span class="tile-topline">TRAFFIC <span>↗</span></span><strong><small>↓</small> 2.4<span>MB/s</span></strong><span class="network-spark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="tile-bottomline"><span>↑ 320 KB/s</span><span>eth0</span></span></button>
+          <button class="tile storage-tile" data-tile="storage" data-terms="storage disk drive space ncdu files monitoring" data-app="Storage / ncdu" data-command="omarchy launch terminal -- ncdu" data-nav><span class="tile-topline">STORAGE <span>↗</span></span><strong>182<span>GB FREE</span></strong><span class="storage-meter"><i></i></span><span class="tile-bottomline"><span>nvme0n1</span><span>63% used</span></span></button>
+        </div>
+      </section>
+
+      <section class="tile-group media-group" aria-labelledby="media-heading">
+        <div class="group-heading"><h2 id="media-heading">In the flow</h2><span>03 / SET THE PACE</span></div>
+        <div class="tile-grid media-grid">
+          <article class="tile media-tile wide tall" data-tile="media" data-terms="media player music audio spotify tycho song playing" data-nav tabindex="0" aria-label="Media player controls">
+            <div class="tile-topline"><span id="media-state">NOW PLAYING</span><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+            <div class="record-art" aria-hidden="true"><div class="art-stripes"></div><div class="record-ring ring-one"></div><div class="record-ring ring-two"></div><div class="record-core"></div><span class="art-coordinate">TY / 2011</span><span class="art-title">dive</span></div>
+            <div class="track-copy"><h3 id="track-title">A Walk</h3><p id="track-artist">Tycho · Dive</p></div>
+            <div class="media-transport"><button class="icon-button" id="previous-track" aria-label="Previous track"><svg class="icon"><use href="#i-previous"/></svg></button><button class="play-button" id="play-button" aria-label="Pause music" aria-pressed="true"><svg class="icon"><use id="play-icon" href="#i-pause"/></svg></button><button class="icon-button" id="next-track" aria-label="Next track"><svg class="icon"><use href="#i-next"/></svg></button></div>
+            <div class="seek-row"><span id="elapsed">1:34</span><label class="sr-only" for="seek">Track position</label><input id="seek" type="range" min="0" max="316" value="94"><span id="duration">5:16</span></div>
+          </article>
+          <article class="tile volume-tile" data-tile="volume" data-terms="volume sound speakers audio mute" data-nav tabindex="0" aria-label="Volume controls"><div class="tile-topline">OUTPUT <button class="icon-button" id="mute-button" aria-label="Mute audio" aria-pressed="false"><svg class="icon small"><use id="volume-icon" href="#i-volume"/></svg></button></div><div class="volume-number"><strong id="volume-number">42</strong><span>%</span></div><label class="sr-only" for="volume">Output volume</label><input id="volume" type="range" min="0" max="100" value="42"><div class="tile-bottomline"><span>Built-in audio</span></div></article>
+          <article class="tile focus-tile" data-tile="focus" data-terms="focus timer pomodoro productivity work" data-nav tabindex="0" aria-label="Focus timer"><div class="tile-topline">FOCUS <span class="focus-mark">◷</span></div><strong id="focus-clock">25:00</strong><div class="tile-bottomline"><button id="focus-button">Start session ↗</button><button id="focus-reset" aria-label="Reset focus timer">↺</button></div></article>
+        </div>
+      </section>
+
+      <section class="tile-group session-group" aria-labelledby="session-heading">
+        <div class="group-heading"><h2 id="session-heading">Make space</h2><span>04 / YOUR SESSION</span></div>
+        <div class="tile-grid session-grid">
+          <button class="tile clock-tile wide" data-tile="clock" data-terms="clock calendar date time day" data-action="calendar" data-nav><span class="tile-topline" id="tile-day">SUNDAY</span><strong id="tile-time">15:42</strong><span class="tile-bottomline" id="tile-date">11 October 2026</span></button>
+          <button class="tile session-tile" data-tile="quiet" data-terms="quiet notifications do not disturb dnd focus" id="quiet-button" aria-pressed="false" data-nav><svg class="app-icon"><use href="#i-moon"/></svg><span class="tile-bottomline"><span>Quiet mode</span><span id="quiet-label">Off</span></span></button>
+          <button class="tile session-tile" data-tile="wifi" data-terms="wifi wireless connection network internet" id="wifi-button" aria-pressed="true" data-nav><svg class="app-icon"><use href="#i-wifi"/></svg><span class="tile-bottomline"><span>Wi-Fi</span><span id="wifi-label">On</span></span></button>
+          <button class="tile session-tile appearance-tile" data-tile="appearance" data-terms="appearance theme colors style light dark" data-action="appearance" data-nav><span class="theme-swatches"><i></i><i></i><i></i></span><span class="tile-bottomline"><span>Appearance</span><span>↗</span></span></button>
+          <button class="tile session-tile" data-tile="lock" data-terms="lock screen session secure" data-app="Lock session" data-command="omarchy system lock" data-nav><svg class="app-icon"><use href="#i-lock"/></svg><span class="tile-bottomline"><span>Lock</span><span>↗</span></span></button>
+        </div>
+      </section>
+    </div>
+    <div class="empty-state" id="empty-state" hidden><span>⌕</span><h2>No matching tiles.</h2><p>Try “btop”, “music”, or a calculation like “24 * 7”.</p><button id="clear-search" class="mode-button">Clear search</button></div>
+    <div class="canvas-caption"><span><i class="status-dot"></i><span id="tile-count">18</span> pinned tiles / your space, your order</span><span>COMPACT COMMANDS. EXPANSIVE POSSIBILITIES.</span></div>
+  </main>
+
+  <section class="compact-launcher" aria-labelledby="compact-title">
+    <div class="compact-heading"><div><span class="eyebrow">DICEY / COMMAND PALETTE</span><h2 id="compact-title">Where to?</h2></div><span class="avatar small-avatar">d</span></div>
+    <div class="search-rail compact-search"><svg class="icon"><use href="#i-search"/></svg><label class="sr-only" for="launcher-search">Search applications</label><input id="launcher-search" type="search" placeholder="Search apps, commands, or calculate…" autocomplete="off"><kbd>/</kbd></div>
+    <div class="compact-results" id="compact-results"></div>
+    <div class="compact-footer"><span>↵ open <span>·</span> esc close</span><button class="mode-button" data-switch="control">Dicey Home <kbd>Ctrl ⇧ F</kbd></button></div>
+  </section>
+  <button class="reopen-button mode-button" data-switch="launcher">Open launcher <svg class="icon small"><use href="#i-grid"/></svg></button>
+
+  <footer class="concept-footer"><div class="footer-keys"><span><kbd>← ↑ ↓ →</kbd> tiles</span><span><kbd>↵</kbd> open</span><span><kbd>/</kbd> search</span><span><kbd>esc</kbd> launcher</span></div><div class="prototype-note"><button id="simulation-button" aria-pressed="true"><span class="status-dot"></span> Demo running</button><span>DESIGN PROTOTYPE / SIMULATED DATA</span></div></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="tile-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><span class="eyebrow">CONTROL PANE / INSPECT</span><button class="icon-button dialog-close" aria-label="Close preview"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="dialog-title">Activity monitor</h2><div id="dialog-content"></div><div class="dialog-bottom"><span>Esc to return to your tiles</span><button class="mode-button dialog-close">Back to Dicey Home ↗</button></div></dialog>
+  <dialog id="customize-dialog" aria-labelledby="customize-title"><div class="dialog-top"><span class="eyebrow">YOUR SPACE / YOUR ORDER</span><button class="icon-button customize-close" aria-label="Close tile customization"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="customize-title">Make it yours.</h2><p class="dialog-description">Choose what lives in your Dicey Home. Your selection is remembered in this prototype.</p><div id="tile-options" class="tile-options"></div><div class="dialog-bottom"><button class="text-button" id="restore-tiles">Restore all tiles</button><button class="mode-button customize-close">Done ↗</button></div></dialog>
+</body>
+</html>
