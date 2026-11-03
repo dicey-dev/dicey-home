@@ -81,12 +81,11 @@ checks cover keyboard switching, search, compact dialogs, and shell restart.
 ## Verification commands
 
 ```bash
-node tests/test_home.js
-node tests/test_launcher.js
-/usr/bin/python3 -B -m unittest discover -s tests -p 'test_*.py'
+tests/run.sh
+tests/run.sh --compat
 omarchy plugin validate .
-/usr/bin/python3 -B tests/verify_home.py
-/usr/bin/python3 -B tests/verify_launcher_layout.py
+python3 -B tests/verify_home.py
+python3 -B tests/verify_launcher_layout.py
 ```
 
 The last two checks need an idle graphical session and restart the shell. The

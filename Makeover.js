@@ -9,7 +9,7 @@ function transform(source, searchUrl, helperUrl) {
     source = source.replace(before, after)
   }
   var pluginDirectory = searchUrl.slice(0, searchUrl.lastIndexOf("/"))
-  replace('import QtQuick', 'import QtQuick\nimport "' + searchUrl + '" as DiceySearch\nimport "' + pluginDirectory + '" as Dicey')
+  replace('import QtQuick', 'import QtQuick\nimport "' + searchUrl + '" as DiceySearch\nimport "' + pluginDirectory + '" as Dicey\nimport "' + pluginDirectory + '/home" as DiceyHome')
   replace('  function open(payloadJson) {', '  function open(payloadJson) {\n    diceyProfile.refresh()\n    root.diceyProbeEngine()')
   replace('  property string filterText: ""', `  property string filterText: ""
   onFilterTextChanged: root.diceyQueueWeb()
@@ -84,7 +84,7 @@ function transform(source, searchUrl, helperUrl) {
     root.diceyWebRows = []
     if (diceyEngineProc.running) diceyEngineProc.running = false
     diceyEngineProc.collected = ""
-    diceyEngineProc.command = ["/usr/bin/python3", "-B", decodeURIComponent(root.diceyBrowserHelper.replace(/^file:\\/\\//, "")), "--describe"]
+    diceyEngineProc.command = ["python3", "-B", decodeURIComponent(root.diceyBrowserHelper.replace(/^file:\\/\\//, "")), "--describe"]
     diceyEngineProc.running = true
   }
 
@@ -161,7 +161,7 @@ function transform(source, searchUrl, helperUrl) {
       if (diceyWebProc.running) { restart(); return }
       diceyWebProc.query = root.diceyWebQuery
       diceyWebProc.collected = ""
-      diceyWebProc.command = ["/usr/bin/python3", "-B", decodeURIComponent(root.diceyHelper.replace(/^file:\\/\\//, "")), diceyWebProc.query]
+      diceyWebProc.command = ["python3", "-B", decodeURIComponent(root.diceyHelper.replace(/^file:\\/\\//, "")), diceyWebProc.query]
       diceyWebProc.running = true
     }
   }
@@ -218,7 +218,7 @@ function transform(source, searchUrl, helperUrl) {
     '      height: root.diceyFullscreenActive ? panel.height : Math.min(root.cardHeight, panel.height - Style.gapsOut - panel.effectiveCardTop)')
   replace('      radius: root.cornerRadius\n      anchors.horizontalCenter: parent.horizontalCenter',
     '      radius: root.diceyFullscreenActive ? 0 : root.cornerRadius\n      anchors.horizontalCenter: parent.horizontalCenter')
-  replace('    BorderSurface {\n      id: card', `    Dicey.Home {
+  replace('    BorderSurface {\n      id: card', `    DiceyHome.Home {
       id: diceyHome
       x: 0; y: 0
       width: panel.width
@@ -257,7 +257,7 @@ function transform(source, searchUrl, helperUrl) {
       Quickshell.execDetached(["bash", "-c", "printf %s " + Util.shellQuote(row.action) + " | wl-copy"])
       root.cancel()
     } else if (row.kind === "web-search") {
-      Quickshell.execDetached(["/usr/bin/python3", "-B", decodeURIComponent(root.diceyBrowserHelper.replace(/^file:\\/\\//, "")), "--open", row.action])
+      Quickshell.execDetached(["python3", "-B", decodeURIComponent(root.diceyBrowserHelper.replace(/^file:\\/\\//, "")), "--open", row.action])
       root.cancel()
     } else if (row.kind === "web-result") {
       if (DiceySearch.safeUrl(row.action)) Quickshell.execDetached(["omarchy", "launch", "browser", row.action])

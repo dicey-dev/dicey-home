@@ -5,8 +5,10 @@ Wi-Fi, notifications, lock state, or launch applications. Requires python-dbus
 and python-gobject for the test-only media fixture.
 """
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,7 +20,7 @@ def command(*args):
 
 
 def call(method, argument=""):
-    return command("omarchy-shell", "shell", "call", "dicey.home", method, argument)
+    return command("omarchy-shell", "shell", "call", os.environ.get("DICEY_PLUGIN_ID", "dicey.home"), method, argument)
 
 
 def state():
@@ -100,7 +102,7 @@ try:
         tested_focus = False
         print("Focus timer continues while closed; background telemetry stops.")
 
-    fixture = subprocess.Popen(["/usr/bin/python3", "-B", str(ROOT / "tests/control_mpris_fixture.py")], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    fixture = subprocess.Popen([sys.executable, "-B", str(ROOT / "tests/control_mpris_fixture.py")], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert fixture.stdout.readline().strip() == "ready"
     wait_for(lambda current: current.get("home", {}).get("playerCount", 0) >= 1)
     call("paneAction", "player:" + FIXTURE)

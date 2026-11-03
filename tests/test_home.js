@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const model = require('../HomeModel.js');
+const model = require('../home/HomeModel.js');
 
 assert.deepEqual(model.normalizeHidden(['media', 'media', '../../file', 'browser', 42]), ['media', 'browser']);
 assert.deepEqual(model.normalizeHidden(null), []);

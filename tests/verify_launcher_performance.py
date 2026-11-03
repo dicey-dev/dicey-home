@@ -1,5 +1,6 @@
 """Idle-desktop check for input latency, batched results, and fullscreen bounds."""
 import json
+import os
 import subprocess
 import time
 
@@ -9,7 +10,7 @@ def command(*args):
 
 
 def call(method, argument=""):
-    return command("omarchy-shell", "shell", "call", "dicey.home", method, argument)
+    return command("omarchy-shell", "shell", "call", os.environ.get("DICEY_PLUGIN_ID", "dicey.home"), method, argument)
 
 
 def state():
