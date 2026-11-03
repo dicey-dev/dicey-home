@@ -1,131 +1,126 @@
-# Dicey Home development environment
+# Development and production
 
-## The Omarchy model
+## Structure and the Omarchy contract
 
-Official sources checked in the browser:
+This repository follows [Omaplug](https://github.com/fross100/omaplug): root
+manifest/public QML entry points and runtime helpers, feature components in
+`home/`, one `tests/run.sh` entry point, README and license. `scripts/` and
+`docs/` are development tooling. `mockups/` is design material, not the runtime.
+Omaplug itself has no dedicated dev-mode command; our opt-in tool adds that
+separation while keeping normal Omarchy production installation.
 
-- [Shell Plugins manual](https://omarchy.org/manual/shell-plugins/)
-- [Development guide](https://plugins.omarchy.org/develop.html)
-- [Shell runtime reference](https://github.com/omacom/omarchy/blob/quattro/docs/omarchy-shell.md)
+`manifest.json` declares the `menu` and `bar-widget` kinds, loading `Launcher.qml`
+and `BarWidget.qml`. These are two real shell entry points, unlike an internal
+detail panel that does not need its own manifest kind. `home/` contains the
+dashboard's internal QML components and pure JS model; shared `Profile.qml`,
+launcher transformation/search code and Python helpers remain at the root.
 
-This is a native QML plugin inside the existing long-running Omarchy shell, not
-a web application. Its HTML mockup is not the native runtime. No frontend
-server, bundler, or second Quickshell process is needed. Omarchy watches real
-files under `~/.config/omarchy/plugins/` and hot-reloads plugin code on save.
-Never develop by changing the packaged `/usr/share/omarchy` tree.
+QML is Qt's declarative UI language. Quickshell exposes desktop services;
+Omarchy supplies theme, components and lifecycle. JavaScript executes in Qt,
+not Node. Python helpers use the standard library for browser metadata, search
+and activity; see [security boundaries](security-review.md). Plugins run
+unsandboxed inside the existing shell, not a web server or second Quickshell.
 
-The official tutorial normally edits a user-owned clone directly. We keep Git
-source under `~/projects` and deploy real copies instead; validation rejects
-symlinks in plugin folders. The watcher is local development tooling, not a
-dependency marketplace users should install.
+## Tests and validation
 
-## Development setup
-
-- Source: `~/projects/dicey-home`; plugin ID is **`dicey.home`**.
-- Runtime: `~/.config/omarchy/plugins/dicey.home`.
-- Configure the shared `dicey-kustomarchy-sync.path` for the renamed source and plugin ID. Its service
-  stages and validates copies, deploys changed contents only, preserves backups
-  outside the plugin scan directory, and requests a shell rescan.
-- Git metadata, docs, tests, mockups, scripts, virtualenvs, `.env*`, caches, and
-  Python bytecode are excluded. A lock serializes deployments.
-- Source is authoritative. Direct live edits are overwritten by a later save.
-- `~/dicey-kustomarchy/scripts` is still required; independent project tooling
-  below is a proposal, not an already implemented feature.
-- Run `manage-watcher restart` after adding runtime subdirectories. The current
-  systemd unit watches existing directories, not future directories recursively.
-
-From this repository:
+Install Python 3 and Node. Tests have no third-party pip/npm dependencies. Like
+Omaplug, `tests/run.sh` uses global `python3`/`node` resolved through `PATH`, not
+hardcoded interpreter paths. Check `command -v python3` / `command -v node` when
+using activated environments. This setup is deliberately not version-pinned or
+hermetic. Node is test-only; installed helper processes still require Python.
 
 ```bash
+tests/run.sh
+# Requires the actual installed Omarchy menu source:
+tests/run.sh --compat
 omarchy plugin validate .
-node tests/test_launcher.js
-node tests/test_home.js
-/usr/bin/python3 -B -m unittest discover -s tests -p 'test_*.py'
+qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" ./*.qml home/*.qml
+```
+
+The runner works from any directory. The default suite tests Python helpers,
+JS arithmetic/models and development deployment/recovery without desktop IPC.
+`--compat` tests `Makeover.js` against the actual installed `Menu.qml`, rejecting
+unsupported adaptation anchors. It is separate so ordinary unit tests work
+without an Omarchy installation. QML lint uses the installed shell imports;
+choose the Qt tools matching Omarchy rather than an unrelated Conda installation.
+Existing warnings are not suppressed. Static-file lint cannot prove dynamically
+generated menu QML or native desktop interactions.
+
+## Opt-in development mode
+
+From a source checkout outside the installed production folder:
+
+```bash
+scripts/dev.py start
+```
+
+The foreground command stages and validates real runtime files in
+`~/.config/omarchy/plugins/dicey.home.dev`, saves the currently enabled menu ID,
+then switches to the development plugin. Installed `dicey.home` files are never
+written. Literal plugin IDs are scoped in the development copy, so its layout
+preferences use `dicey.home.dev` state rather than production preferences.
+
+Every half second, content changes/new directories/deletions are detected.
+Each update is validated before replacing the last valid development copy;
+Omarchy handles hot reload. Tooling, docs, tests, hidden directories and mockups
+are not copied; symlinks are rejected. Runtime file selection currently covers
+QML/JS/Python/JSON and license files; extend it deliberately for new asset formats.
+
+Ctrl+C/SIGTERM restores the previously enabled menu and removes the development
+copy. No background service is installed, and a per-plugin lock prevents two
+development sessions from competing. Do not manually switch menus or perform
+plugin updates/removal during a development session. After an interrupted
+session or failed restoration, recover with:
+
+```bash
+scripts/dev.py restore
+```
+
+The recovery journal lives under `$XDG_STATE_HOME/omarchy/development`
+(default `~/.local/state/omarchy/development`) and is kept until restoration
+succeeds. Unmanaged folders using the development ID are never overwritten.
+Stop/disable pre-existing external auto-deployers before adopting this workflow.
+Neither this tool nor the plugin requires another source repository.
+
+This is not a sandbox: development uses your current shell process and can
+affect its shared configuration, browser reads, network and desktop services.
+Production **files** and Home preferences are separate, but bar layout and other
+global configuration are not isolated. Use a VM/separate graphical session for
+risky changes. Never edit packaged Omarchy files or symlink a plugin folder.
+
+## Native tests and production lifecycle
+
+`tests/verify_*.py` deliberately operate the desktop and may restart the shell;
+run them only in an idle graphical test session, never on every save:
+
+```bash
+python3 -B tests/verify_launcher_layout.py
+python3 -B tests/verify_launcher_performance.py
+python3 -B tests/verify_home.py
+```
+
+These require `wtype`; the media fixture additionally needs `python-dbus` and
+`python-gobject` matching the selected Python. The fixture inherits that same
+interpreter through `sys.executable`. Do not globally pip-install native system
+bindings. Native scripts target production by default; set `DICEY_PLUGIN_ID` to
+`dicey.home.dev` to inspect a development session.
+
+Production is installed and updated deliberately, independently of source edits:
+
+```bash
 omarchy plugin add https://github.com/dicey-dev/dicey-home.git
-~/dicey-kustomarchy/scripts/manage-watcher status
+omarchy plugin enable dicey.home
+omarchy plugin update dicey.home
+# Restore stock before removing:
+omarchy plugin enable omarchy.menu
+omarchy plugin remove dicey.home
 ```
 
-The compatibility test uses the installed Omarchy menu. Node is a test tool,
-not a plugin runtime dependency. Python helpers use the standard library; use
-`-B` / `PYTHONDONTWRITEBYTECODE=1` to avoid generated bytecode. The live media
-fixture additionally uses system `python-dbus` and `python-gobject`.
-
-## Recommended independent tools (next implementation)
-
-Use a small `scripts/dev` interface with the same command names as Dicey Bar,
-but independent targets, locks, backups, and optional user services:
-
-- **`doctor`:** Omarchy/Qt versions, imports, required commands, desktop IPC,
-  manifest ID, target ownership, conflicting Git-managed live install.
-- **`check`:** manifest validation, QML lint, Node/Python unit tests and
-  installed-menu transformation compatibility. No desktop interactions.
-- **`sync`:** filtered stage, validation, backup, deploy changed contents, rescan.
-  Failed validation leaves the live copy untouched.
-- **`watch`:** foreground recursive `inotifywait`, debounce save bursts, handle
-  new folders/deletions/editor renames, report errors clearly.
-- **`logs` / `status`:** shell logs, enabled state, source/deployed revision,
-  last-good snapshot, compatibility state and last error.
-- **`stop`:** stop only Home's optional background watcher.
-- **`restart`:** explicit opt-in shell restart, never implicit per save.
-- **`rollback`:** stop deployment, restore stock menu or last-good snapshot,
-  preserve preferences and avoid global configuration resets.
-
-Implement foreground tools and safety tests first. Add independent optional user
-services afterwards and retire the shared coordinator. Old and new watchers
-must never deploy the same plugin simultaneously. There is no need to rename
-the runtime ID or rewrite existing shortcuts to build a development environment.
-
-Use `qmllint`/`qmlls` with installed shell imports. Start with:
-
-```bash
-qmllint -I "${OMARCHY_PATH:-/usr/share/omarchy}/shell" ./*.qml
-```
-
-Establish a reviewed lint baseline for injected shell APIs; don't hide warnings
-or claim manifest validation proves runtime correctness. `Makeover.js` generates
-QML from the installed menu, so static-file lint is insufficient: preserve the
-transformation tests and native smoke tests. Qt 6.12 also requires auditing
-`Commons.Color` qualification; that is separate from this migration.
-
-## Reload, restart, and recovery
-
-Most QML/JS edits reload after deployment. Use
-`omarchy-shell shell rescanPlugins` if discovery is stale. Python changes apply
-when helpers start again. The shell reference notes that kept **service** objects
-can survive hot reload, requiring deliberate restart for service-code changes.
-`keepLoaded` is not a reason to restart the desktop on every save.
-
-```bash
-qs log -p "${OMARCHY_PATH:-/usr/share/omarchy}/shell" --tail 100
-omarchy plugin list --json
-```
-
-For fallback, stop the watcher, then `omarchy plugin enable omarchy.menu`.
-Stopping today's shared watcher pauses both projects but does not disable them.
-Do not delete `shell.json`, browser preferences, or saved layout state. The live
-development copy is a deployed snapshot, not the source Git checkout; do not
-mix `omarchy plugin update` with this save/deploy loop.
-
-## Test layers and isolation
-
-1. **Fast checks:** manifest, lint, calculator/search/preferences/telemetry unit
-   tests and menu transformation compatibility; no desktop changes.
-2. **Explicit native smoke checks:** `tests/verify_*.py` open menus, type through
-   IPC, and may restart the shell. Run deliberately on an idle session, never
-   on each save or in generic unit-test CI.
-3. **Isolated integration:** separate Omarchy VM/graphical test account for menu
-   takeover, shortcuts, dmenu routes, focus, audio/media, unavailable dependencies,
-   no-network behavior, fallback, restart/persistence, update/removal, and
-   interaction with Dicey Bar. Changing `$HOME` alone does not isolate compositor
-   or shell IPC. Plugins are unsandboxed.
-
-The launcher transforms installed `Menu.qml` and references `MenuModel.js`;
-support should be tied to tested Omarchy versions. Test stock fallback when
-anchors change. Preserve `omarchy.clonedFrom` until replacement routing and
-source-scoped capabilities are deliberately resolved: the standalone clock
-tutorial's cleanup is not automatically safe for a menu replacement.
-
-Document browser preference/database reads, search-provider network requests,
-telemetry, and persistent state before distribution. Keep avatars, browser
-profiles, tokens, caches, and private screenshots outside Git. VM smoke tests
-and sanitized preview assets come before marketplace submission.
+`add` is for a fresh install; `update` requires a Git-managed installed copy.
+Manually copied existing installs need explicit migration, not silent overwrites.
+Preserve `$XDG_STATE_HOME/omarchy/dicey.home` preferences on removal. Before
+[marketplace submission](https://plugins.omarchy.org/publish.html), complete
+upstream licensing/attribution and native takeover/dmenu, click/Escape,
+summon/hide, fallback, restart, update/removal and missing-dependency testing.
+Keep clone metadata while replacement routing depends on it. Marketplace
+validation is not a security audit. Never commit browser databases or tokens.

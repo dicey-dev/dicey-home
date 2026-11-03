@@ -210,10 +210,9 @@ does not require Hyprland edits.
 ## Verification
 
 ```bash
+tests/run.sh
+tests/run.sh --compat
 omarchy plugin validate .
-node tests/test_launcher.js
-/usr/bin/python3 -B -m unittest discover -s tests -p 'test_launcher_web.py'
-/usr/bin/python3 -B -m unittest discover -s tests -p 'test_launcher_browser.py'
 omarchy-menu toggle apps
 omarchy-shell shell call dicey.home inspect ''
 omarchy-shell shell call dicey.home search '24 * 7'
@@ -228,7 +227,7 @@ used by the keyboard.
 On an idle desktop, run the live layout regression check:
 
 ```bash
-/usr/bin/python3 -B tests/verify_launcher_layout.py
+python3 -B tests/verify_launcher_layout.py
 ```
 
 It requires `wtype`, opens the launcher, exercises the actual keyboard shortcut,
@@ -241,9 +240,8 @@ spatial keyboard navigation, focus continuation, saved tiles, and MPRIS controls
 using a silent test-only player:
 
 ```bash
-node tests/test_home.js
-/usr/bin/python3 -B -m unittest discover -s tests -p 'test_control_activity.py'
-/usr/bin/python3 -B tests/verify_home.py
+tests/run.sh
+python3 -B tests/verify_home.py
 ```
 
 The live check requires `wtype`, `python-dbus`, and `python-gobject`, restarts the
@@ -254,5 +252,5 @@ For input latency, batched publications, virtualized delegate counts, and full
 screen geometry on an idle desktop:
 
 ```bash
-/usr/bin/python3 -B tests/verify_launcher_performance.py
+python3 -B tests/verify_launcher_performance.py
 ```

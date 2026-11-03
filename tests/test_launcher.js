@@ -1,8 +1,5 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const search = require('../Search.js');
-const makeover = require('../Makeover.js');
 
 for (const [expression, answer] of [
   ['24 * 7', '168'], ['(12 + 8) / 5', '4'], ['0.1 + 0.2', '0.3'],
@@ -24,20 +21,4 @@ assert.equal(search.safeUrl('javascript:alert(1)'), false);
 assert.equal(search.safeUrl('https://example.com/hello'), true);
 assert.equal(search.searchQuery('? cats & dogs'), 'cats & dogs');
 
-// Exercise compatibility against the installed source; reject an upstream
-// change instead of partially rewriting the launcher and breaking its menus.
-const root = process.env.OMARCHY_PATH || '/usr/share/omarchy';
-const stock = fs.readFileSync(path.join(root, 'shell/plugins/menu/Menu.qml'), 'utf8');
-const output = makeover.transform(stock, 'file:///tmp/Search.js', 'file:///tmp/web-results.py');
-assert.match(output, /Style\.space\(720\)/);
-assert.match(output, /diceyAppendSearch\(rows, query\)/);
-for (const method of ['openDmenu', 'finishRequest', 'requestDeleteSelected', 'confirmDelete', 'evaluateGuards', 'resolveRoute', 'loadProviderForMenu']) {
-  const start = stock.indexOf('  function ' + method + '(');
-  const end = stock.indexOf('\n  }', start + 1) + '\n  }'.length;
-  // Whole original function bodies, including the dmenu completion protocol,
-  // uninstall flow, guard engine, and route resolution, survive the makeover.
-  const body = stock.slice(start, end).trimEnd();
-  assert.ok(output.includes(body), method + ' is retained');
-}
-assert.throws(() => makeover.transform(stock.replace('  property string filterText: ""', '  property string filterText: "changed"'), 'Search.js', 'web.py'), /Unsupported Omarchy menu anchor/);
-console.log('Launcher arithmetic, URL handling, and installed-menu compatibility passed.');
+console.log('Launcher arithmetic and URL handling passed.');

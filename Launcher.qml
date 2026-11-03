@@ -4,7 +4,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.services as Services
 import "Makeover.js" as Makeover
-import "HomeModel.js" as HomeModel
+import "home/HomeModel.js" as HomeModel
 
 // Adapt the installed menu rather than freeze a fork of its application engine,
 // routing, providers, selection protocol, keyboard handling, and theme bindings.
