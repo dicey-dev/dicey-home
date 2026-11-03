@@ -5,6 +5,7 @@ preference and closes the launcher on completion, including on failure.
 """
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -15,7 +16,7 @@ def command(*args):
 
 
 def call(method, argument=""):
-    return command("omarchy-shell", "shell", "call", "dicey.home", method, argument)
+    return command("omarchy-shell", "shell", "call", os.environ.get("DICEY_PLUGIN_ID", "dicey.home"), method, argument)
 
 
 def state():
