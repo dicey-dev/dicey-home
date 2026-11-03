@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import "HomeModel.js" as Model
+import ".." as Plugin
 
 FocusScope {
   id: home
@@ -247,7 +248,7 @@ FocusScope {
           Text { text: Qt.formatDateTime(clock.date, "dddd, d MMMM").toUpperCase(); color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
           Text { text: "Dicey Home."; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * 1.8; font.weight: Font.Light; font.letterSpacing: -Style.space(2) }
         }
-        Profile { id: portrait; width: implicitWidth; height: implicitHeight }
+        Plugin.Profile { id: portrait; width: implicitWidth; height: implicitHeight }
       }
       TextField {
         id: search
