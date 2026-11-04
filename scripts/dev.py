@@ -34,7 +34,7 @@ def snapshot(root):
                 raise ValueError(f"Symlink is not allowed: {path}")
         for name in sorted(names):
             path = Path(directory) / name
-            if not name.startswith(".") and (path.suffix in {".qml", ".js", ".py", ".json"} or name == "LICENSE"):
+            if not name.startswith(".") and (path.suffix in {".qml", ".js", ".py", ".json"} or name in {"LICENSE", "THIRD_PARTY_NOTICES.md"}):
                 files[path.relative_to(root)] = path.read_bytes()
     return files
 

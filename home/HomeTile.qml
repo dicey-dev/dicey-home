@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 BorderSurface {
@@ -25,7 +26,7 @@ BorderSurface {
   signal pinRequested()
   color: hover.containsMouse && interactive ? Qt.tint(tileColor, Util.alpha(foreground, 0.055)) : tileColor
   radius: Math.min(Style.cornerRadius, Style.space(4))
-  borderSpec: activeFocus ? Border.flat(Color.accent, Style.space(2)) : Border.flat(Util.alpha(foreground, 0.16), Style.spacing.hairline)
+  borderSpec: activeFocus ? Border.flat(Commons.Color.accent, Style.space(2)) : Border.flat(Util.alpha(foreground, 0.16), Style.spacing.hairline)
   opacity: pinned ? 1 : 0.4
   activeFocusOnTab: true
   Accessible.role: interactive ? Accessible.Button : Accessible.Grouping

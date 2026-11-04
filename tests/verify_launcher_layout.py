@@ -94,6 +94,10 @@ try:
     initial = open_menu()
     assert initial["enhanced"] and not initial["compatibilityError"], initial
     original = initial["savedFullscreen"]
+    command("wtype", "-k", "Escape")
+    wait_for(lambda current: not current.get("opened"))
+    initial = open_menu()
+    print("Escape closes the native launcher; shell summon reopens it.")
     if original:
         set_fullscreen(False)
     normal = state()

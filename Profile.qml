@@ -3,6 +3,7 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 
 Item {
   id: profile
@@ -72,15 +73,15 @@ Item {
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     radius: width / 2
-    color: Util.alpha(Color.accent, 0.12)
+    color: Util.alpha(Commons.Color.accent, 0.12)
     border.width: Style.spacing.hairline
-    border.color: Util.alpha(Color.accent, 0.45)
+    border.color: Util.alpha(Commons.Color.accent, 0.45)
 
     Text {
       anchors.centerIn: parent
       visible: !profile.pictureReady
       text: profile.initials
-      color: Color.accent
+      color: Commons.Color.accent
       font.family: Style.font.menuFamily
       font.pixelSize: Style.font.body
       font.weight: Font.DemiBold
