@@ -11,6 +11,8 @@ assert.match(output, /Style\.space\(720\)/);
 assert.match(output, /diceyAppendSearch\(rows, query\)/);
 assert.ok(output.includes('/home" as DiceyHome'));
 assert.ok(output.includes('DiceyHome.Home {'));
+assert.ok(output.includes('accent: String(Commons.Color.accent)'));
+assert.doesNotMatch(output, /(?<!\.)\bColor\.accent/);
 for (const method of ['openDmenu', 'finishRequest', 'requestDeleteSelected', 'confirmDelete', 'evaluateGuards', 'resolveRoute', 'loadProviderForMenu']) {
   const start = stock.indexOf('  function ' + method + '(');
   assert.notEqual(start, -1, method + ' exists upstream');

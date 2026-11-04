@@ -37,10 +37,19 @@ applicable syntax/whitespace checks in addition to manual boundary review.
 Network/browser tests use mocks or temporary fixtures. No privileged installer,
 download-to-shell pipeline, or embedded credential was identified.
 
-## Remaining release work
+## Release follow-up
 
-The plugin is unsandboxed and depends on installed menu internals. Full QML
-lint/type baselining, broader Omarchy/Qt compatibility, clean-VM integration,
-clone-routing policy, and upstream license/notice provenance remain open.
-The same-user diagnostic IPC exposes current menu/search state; it is not a
-security boundary against other processes running as that user.
+The publication-readiness pass preserves the complete upstream MIT notice,
+declares mixed Apache/MIT licensing, and adds SemVer/changelog checks and official
+install/update/remove filesystem verification. Qt 6.12 accent references are
+explicitly qualified. Native menu/dashboard, Escape/reopen, layout persistence
+through shell restart and `.dev` restoration were tested on Omarchy 4.0.6 /
+Qt 6.12 / Quickshell 0.3.2; broader versions and clean-VM certification are not
+claimed. See [publishing evidence](publishing.md). Existing lint warnings are
+not suppressed.
+
+Clone metadata deliberately retains supported built-in menu routing/restoration;
+it does not change the author or permanent plugin ID. The dev tool preserves
+production files and uses a separate preference ID, but is not a sandbox. Version
+tooling does not publish/install. The same-user diagnostic IPC exposes current
+menu/search state; it is not a security boundary against other session processes.

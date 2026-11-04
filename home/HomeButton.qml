@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 
 Button {
   id: button
@@ -11,9 +12,9 @@ Button {
   opacity: enabled ? 1 : 0.4
   background: Rectangle {
     radius: Math.min(Style.cornerRadius, Style.space(4))
-    color: button.accented ? Color.accent : Util.alpha(Color.menu.text, button.hovered || button.activeFocus ? 0.12 : 0.045)
+    color: button.accented ? Commons.Color.accent : Util.alpha(Color.menu.text, button.hovered || button.activeFocus ? 0.12 : 0.045)
     border.width: Style.spacing.hairline
-    border.color: button.activeFocus ? Color.accent : Util.alpha(Color.menu.text, 0.18)
+    border.color: button.activeFocus ? Commons.Color.accent : Util.alpha(Color.menu.text, 0.18)
   }
   contentItem: Text {
     id: label
