@@ -1,0 +1,7 @@
+singleton NotificationStore 1.0 NotificationStore.qml
+Home Home.qml
+HomeButton HomeButton.qml
+HomeServices HomeServices.qml
+HomeSlider HomeSlider.qml
+HomeTile HomeTile.qml
+NotificationCenter NotificationCenter.qml

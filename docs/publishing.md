@@ -2,13 +2,12 @@
 
 ## Versioning
 
-This is the **v0.1.0 alpha baseline**, before notification-hub development.
-A 0.x version is not a stability or marketplace-approval claim.
-
-`manifest.json` is the single version source of truth. Use alpha `0.x.y`
-`MAJOR.MINOR.PATCH`: major for breaking behavior/configuration, minor for
-compatible features, patch for compatible fixes. The permanent plugin ID is
-`dicey.home`; it does not change for new releases.
+Both Dicey projects are alpha software and use `0.x.y` versions. Home's only
+tagged release is **v0.1.0**, the pre-notification baseline. Notification work
+after it remains **Unreleased**: do not tag or publish that work until the owner
+explicitly approves it. `manifest.json` retains the last released version while
+Unreleased changes accumulate; it does not mean the current tree was released.
+The permanent plugin ID is `dicey.home`; it does not change for new releases.
 
 ```bash
 python3 scripts/version.py check
@@ -44,6 +43,9 @@ Detaching is **not an update-resistant pin**: both
 can advance this checkout to the remote default HEAD. There is no pin/exclusion
 option in this Omarchy version; avoid both updater forms to hold the snapshot.
 Switching back to `main` is optional for updates, not a protection mechanism.
+The current default branch contains unfinished notification work, so current
+default-HEAD marketplace validation would review that WIP, not the v0.1.0 tag.
+Do not submit the current branch on the strength of the pre-notification release.
 Never discard local edits to force an update. Service changes may require an explicit
 `omarchy restart shell`; normal QML edits use the shell's native reload.
 
@@ -80,6 +82,12 @@ References: [development guide](https://plugins.omarchy.org/develop.html),
   separation, invalid updates, edited-source deployment and activation restore.
   Live layout tests cover Escape/open/close and restart persistence. Supported
   host: Omarchy 4.0.6, Qt 6.12, Quickshell 0.3.2. Other versions are not promised.
+
+Version-history correction (2026-11-07): the premature 2.x tags/releases were
+withdrawn and version-bearing history was rewritten with owner authorization.
+Only the pre-notification v0.1.0 alpha release remains. Existing clones may
+diverge; do not force-reset installed local edits. Preserve them and deliberately
+re-clone/migrate if needed. This is a one-time correction, not a release policy.
 
 No private preview is required; the marketplace can use its fallback image.
 Marketplace validation and a static baseline are not a security certification.

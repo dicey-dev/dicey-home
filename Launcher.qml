@@ -5,6 +5,7 @@ import qs.Commons
 import qs.services as Services
 import "Makeover.js" as Makeover
 import "home/HomeModel.js" as HomeModel
+import "home" as Home
 
 // Adapt the installed menu rather than freeze a fork of its application engine,
 // routing, providers, selection protocol, keyboard handling, and theme bindings.
@@ -128,7 +129,11 @@ Item {
     // a first 'apps' or dmenu request is incorrectly resolved against 'root'.
     if (!pendingOpen || !layoutReady || !menu || !menu.rowsLoaded || !menu.defaultMenuItems.length || !applicationApi) return
     pendingOpen = false
+    var notifications = false
+    try { var payload = JSON.parse(pendingPayload); notifications = payload.view === "notifications" && !payload.mode } catch (error) {}
+    if (notifications && enhanced) fullscreen = true
     menu.open(pendingPayload)
+    if (notifications && enhanced) Qt.callLater(function() { host.paneAction("notifications:view") })
   }
   function close() {
     pendingOpen = false
@@ -154,6 +159,7 @@ Item {
     state.layoutStatePath = layoutStatePath
     state.hiddenTiles = hiddenTiles
     state.focusTimer = {remaining: focusRemaining, running: focusDeadline > 0}
+    state.notifications = Home.NotificationStore.inspect()
     state.appCount = host.menu && host.menu.appLibrary ? host.menu.appLibrary.sortedEntries("").length : 0
     return JSON.stringify(state)
   }

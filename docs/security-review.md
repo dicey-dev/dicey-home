@@ -53,3 +53,13 @@ it does not change the author or permanent plugin ID. The dev tool preserves
 production files and uses a separate preference ID, but is not a sandbox. Version
 tooling does not publish/install. The same-user diagnostic IPC exposes current
 menu/search state; it is not a security boundary against other session processes.
+
+## Notification hub (unreleased alpha)
+
+The notification feed uses bounded, read-only local snapshot ingestion and
+plain-text rendering, stripping control/bidi override characters. No sender
+images, remote URLs, stored argv or live service objects enter the feed. The
+shared singleton starts one shell-owned Python reader, not a notification
+daemon. Public IPC is an explicit command allowlist; the clear-history command
+requires a separate UI confirmation and affects global host history, not just
+Home. Read state contains a watermark/IDs only. See [behavior and limitations](notifications.md).

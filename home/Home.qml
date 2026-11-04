@@ -29,8 +29,8 @@ FocusScope {
   readonly property color onAccent: Model.ink(Commons.Color.accent)
   focus: active
   onActiveChanged: {
-    if (active) { syncFilter(); portrait.refresh(); services.refreshWorkspaceIcons(); Qt.callLater(focusSearch) }
-    else { if (applyFilter) applyFilter.stop(); editing = false }
+    if (active) { syncFilter(); portrait.refresh(); Qt.callLater(focusSearch) }
+    else { if (applyFilter) applyFilter.stop(); editing = false; notifications.reset() }
   }
   onMenuChanged: Qt.callLater(syncFilter)
   function syncFilter() {
@@ -56,10 +56,6 @@ FocusScope {
   function resolveIcon(icon) {
     return iconRevision >= 0 && icon && menu && menu.appLibrary ? String(menu.appLibrary.iconSource(icon)) : ""
   }
-  function workspaceIcon(id) {
-    var entry = services.workspaceIcons[id]
-    return resolveIcon(entry ? entry.icon : "")
-  }
   function loadedIcons() {
     var result = []
     for (var i = 0; i < tiles.length; i++) {
@@ -74,7 +70,7 @@ FocusScope {
   function groupVisible(ids) { return editing || ids.some(function(id) { return home.isPinned(id) }) }
   function groupWidth(index) {
     var available = board.width - board.spacing * (columns - 1)
-    if (columns === 4) return available * [1, 1.36, 1.12, 0.84][index] / 4.32
+    if (columns === 4) return available * [1.6, 1.15, 1.1, 0.85][index] / 4.7
     return available / columns
   }
   function registerTile(tile) { var next = tiles.slice(); next.push(tile); tiles = next }
@@ -131,7 +127,8 @@ FocusScope {
       if (!event.isAutoRepeat && controller) { flushFilter(); controller.toggleHome() }
       event.accepted = true
     } else if (event.key === Qt.Key_Escape) {
-      if (editing) editing = false
+      if (notifications.confirmingClear) notifications.reset()
+      else if (editing) editing = false
       else if (query) { applyFilter.stop(); search.text = ""; menu.setFilter("") }
       else if (allApps) menu.setActiveMenu("root", false)
       else menu.cancel()
@@ -153,13 +150,16 @@ FocusScope {
   Keys.onPressed: function(event) { home.handleKey(event) }
   function launch(command) { Quickshell.execDetached(command); menu.cancel(); return "ok" }
   function runAction(action) {
-    if (action === "editor") return launch(["bash", "-c", 'omarchy launch editor "$(omarchy-cmd-terminal-cwd)"'])
-    if (action === "terminal") return launch(["omarchy", "launch", "terminal"])
-    if (action === "browser") return launch(["omarchy", "launch", "browser"])
-    if (action === "files") return launch(["uwsm-app", "--", "xdg-open", Quickshell.env("HOME")])
-    if (action === "notes") return launch(["uwsm-app", "--", "obsidian"])
+    if (action.indexOf("notifications:") === 0) {
+      var name = action.slice(14)
+      if (name === "view") {
+        applyFilter.stop(); search.text = ""; menu.setFilter(""); menu.setActiveMenu("root", false)
+        Qt.callLater(function() { viewport.contentY = Math.max(0, Math.min(board.y, viewport.contentHeight - viewport.height)); notifications.focusFeed() })
+      }
+      return notifications.action(name)
+    }
     if (action === "activity") return launch(["omarchy", "launch", "tui", "btop"])
-    if (action === "storage") return metrics.tools && metrics.tools.ncdu ? launch(["omarchy", "launch", "tui", "ncdu", Quickshell.env("HOME")]) : runAction("files")
+    if (action === "storage") return metrics.tools && metrics.tools.ncdu ? launch(["omarchy", "launch", "tui", "ncdu", Quickshell.env("HOME")]) : launch(["uwsm-app", "--", "xdg-open", Quickshell.env("HOME")])
     if (action === "network") { menu.openRoute("setup.network"); return "ok" }
     if (action === "appearance") { menu.openRoute("style.theme"); return "ok" }
     if (action === "lock") { menu.openRoute("system.lock"); return "ok" }
@@ -187,6 +187,7 @@ FocusScope {
       resultPublications: menu ? menu.diceyControlPublishCount : 0,
       liveResultDelegates: resultDelegateCount(),
       appIcons: loadedIcons(),
+      notificationView: {focused: notifications.activeFocus, confirmingClear: notifications.confirmingClear, unreadOnly: notifications.unreadOnly, width: notifications.width, height: notifications.height, feed: notifications.inspectFeed()},
       geometry: {width: width, height: height, viewportHeight: viewport.height, dashboardHeight: board.height, tileUnit: unit}}
   }
 
@@ -221,7 +222,7 @@ FocusScope {
   Flickable {
     id: viewport
     anchors.fill: parent
-    anchors.margins: Style.space(40)
+    anchors.margins: Style.space(home.width < Style.space(600) ? 20 : 40)
     anchors.bottomMargin: Style.space(55)
     contentWidth: width
     contentHeight: content.height
@@ -235,11 +236,11 @@ FocusScope {
       RowLayout {
         width: parent.width
         height: Style.space(32)
-        Text { text: "DICEY / DESKTOP EXPERIENCE"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
+        Text { visible: home.width >= Style.space(780); text: "DICEY / DESKTOP EXPERIENCE"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
         HomeButton { text: home.allApps ? "Home tiles" : "All apps"; onClicked: home.menu.setActiveMenu(home.allApps ? "root" : "apps", false) }
         HomeButton { text: home.editing ? "Done" : "Edit tiles"; visible: !home.resultsMode; onClicked: home.editing = !home.editing }
         HomeButton { text: "Restore tiles"; visible: home.editing; onClicked: home.controller.restoreTiles() }
-        HomeButton { text: "Launcher  Ctrl+Shift+F"; onClicked: { home.flushFilter(); home.controller.toggleHome() } }
+        HomeButton { text: home.width < Style.space(780) ? "Launcher" : "Launcher  Ctrl+Shift+F"; onClicked: { home.flushFilter(); home.controller.toggleHome() } }
       }
       RowLayout {
         width: parent.width
@@ -247,9 +248,9 @@ FocusScope {
         Column {
           Layout.fillWidth: true
           Text { text: Qt.formatDateTime(clock.date, "dddd, d MMMM").toUpperCase(); color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
-          Text { text: "Dicey Home."; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * 1.8; font.weight: Font.Light; font.letterSpacing: -Style.space(2) }
+          Text { text: "Dicey Home."; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * (home.width < Style.space(600) ? 1.2 : 1.8); font.weight: Font.Light; font.letterSpacing: -Style.space(2) }
         }
-        Plugin.Profile { id: portrait; width: implicitWidth; height: implicitHeight }
+        Plugin.Profile { id: portrait; visible: home.width >= Style.space(600); width: implicitWidth; height: implicitHeight }
       }
       TextField {
         id: search
@@ -321,34 +322,15 @@ FocusScope {
         visible: !home.resultsMode
         width: parent.width
         spacing: Style.space(24)
-        Column {
+        NotificationCenter {
+          id: notifications
           width: home.groupWidth(0)
-          spacing: Style.space(12)
-          visible: home.groupVisible(["editor", "terminal", "browser", "files", "notes"])
-          Heading { title: "Workspace"; subtitle: "01 / YOUR DAILY TOOLS" }
-          GridLayout {
-            width: parent.width; columns: 2; rowSpacing: home.gap; columnSpacing: home.gap
-            Tile {
-              id: editorTile
-              tileId: "editor"; title: "Editor"; caption: "DEFAULT EDITOR"; Layout.columnSpan: 2
-              iconSource: home.workspaceIcon("editor"); iconSize: Style.space(60)
-              Layout.preferredHeight: home.unit * 2 + home.gap
-              tileColor: Qt.tint(Color.menu.background, Util.alpha(Commons.Color.accent, 0.15))
-              onActivated: home.runAction("editor")
-              Column {
-                anchors.fill: parent
-                spacing: Style.space(10)
-                Item {
-                  width: parent.width; height: editorTile.iconSize
-                  Text { visible: !editorTile.iconReady; text: "N"; color: Commons.Color.accent; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * 1.7 }
-                }
-                Text { text: "Pick up where\nyou left off."; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.heading; font.weight: Font.Light }
-              }
-            }
-            Tile { tileId: "terminal"; title: "Terminal"; caption: "SHELL"; glyph: ">_"; iconSource: home.workspaceIcon("terminal"); onActivated: home.runAction("terminal") }
-            Tile { tileId: "browser"; title: "Browser"; caption: "DEFAULT BROWSER"; glyph: "◎"; iconSource: home.workspaceIcon("browser"); onActivated: home.runAction("browser") }
-            Tile { tileId: "files"; title: "Files"; caption: "HOME"; glyph: "▱"; iconSource: home.workspaceIcon("files"); onActivated: home.runAction("files") }
-            Tile { tileId: "notes"; title: "Notes"; caption: "OBSIDIAN"; glyph: "▤"; iconSource: home.workspaceIcon("notes"); enabled: !!(home.metrics.tools && home.metrics.tools.obsidian); onActivated: home.runAction("notes") }
+          feedHeight: home.unit * 3.3
+          onRevealRequested: function(control) {
+            var point = control.mapToItem(content, 0, 0)
+            if (point.y < viewport.contentY) viewport.contentY = point.y
+            else if (point.y + control.height > viewport.contentY + viewport.height)
+              viewport.contentY = Math.max(0, Math.min(viewport.contentHeight - viewport.height, point.y + control.height - viewport.height))
           }
         }
         Column {
@@ -529,7 +511,7 @@ FocusScope {
   RowLayout {
     anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
     anchors.margins: Style.space(18)
-    Text { text: "↑↓←→ tiles   ↵ open   / search   esc close"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
-    Text { text: "CONTROL PANE / LIVE SERVICES"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
+    Text { text: notifications.activeFocus ? "Tab controls   PgUp/PgDn feed   / search   esc close" : "↑↓←→ tiles   ↵ open   / search   esc close"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
+    Text { visible: home.width >= Style.space(780); text: "CONTROL PANE / LIVE SERVICES"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
   }
 }
