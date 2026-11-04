@@ -66,7 +66,7 @@ try:
     command("wtype", "-M", "ctrl", "-M", "shift", "-k", "f", "-m", "shift", "-m", "ctrl")
     wait_for(lambda current: current.get("layout") == "home")
     command("wtype", "-k", "Down")
-    first = wait_for(lambda current: current.get("home", {}).get("focusedTile") == "editor")
+    first = wait_for(lambda current: current.get("home", {}).get("focusedTile") == "activity")
     command("wtype", "-k", "Right")
     wait_for(lambda current: current.get("home", {}).get("focusedTile") != first["home"]["focusedTile"])
     call("search", "24 * 7")

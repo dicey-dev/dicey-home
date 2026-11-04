@@ -13,6 +13,15 @@ SPEC.loader.exec_module(version)
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_unreleased_alpha_uses_last_released_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "manifest.json").write_text(json.dumps({"id": "example.test", "version": "0.1.0"}))
+            (root / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n\n- WIP.\n\n## [0.1.0]\n\n- Baseline.\n")
+            with patch.object(version, "ROOT", root), patch.object(sys, "argv", ["version.py", "check"]), patch("builtins.print") as output:
+                version.main()
+            self.assertIn("unreleased development; last release v0.1.0", output.call_args.args[0])
+
     def test_semantic_bumps_and_invalid_versions(self):
         self.assertEqual(version.bumped("1.2.3", "patch"), "1.2.4")
         self.assertEqual(version.bumped("1.2.3", "minor"), "1.3.0")

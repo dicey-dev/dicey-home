@@ -32,6 +32,7 @@ class DevelopmentTest(unittest.TestCase):
 
     def test_runtime_snapshot_excludes_tooling_and_scopes_development_id(self):
         files = dev.snapshot(ROOT)
+        self.assertIn(Path("home/qmldir"), files)
         self.assertFalse(any(set(path.parts) & dev.EXCLUDED for path in files))
         with tempfile.TemporaryDirectory() as directory:
             stage = Path(directory)

@@ -30,10 +30,12 @@ def main():
     current = manifest["version"]
     bumped(current, "patch")  # Validate even when checking without a bump.
     changelog = changelog_path.read_text()
-    if not changelog.split("\n## [", 1)[-1].startswith(current + "]"):
+    releases = re.findall(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+    if not releases or releases[0] != current:
         parser.error("The first changelog release must match manifest.json")
     if args.action == "check":
-        print(f"{manifest['id']} {current} (tag v{current})")
+        status = "unreleased development; last release " if "\n## [Unreleased]" in changelog else "release "
+        print(f"{manifest['id']} {current} ({status}v{current})")
         return
     if not args.note or "\n" in args.note or "\r" in args.note:
         parser.error("Provide one single-line release-note sentence")

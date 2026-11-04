@@ -1,7 +1,14 @@
 # Changelog
 
-Versions follow [Semantic Versioning](https://semver.org/) using 0.x alpha versions. `manifest.json`
-is the version source of truth; GitHub releases use matching `vX.Y.Z` tags.
+Versions follow [Semantic Versioning](https://semver.org/), with **0.x alpha**
+versions while the project is under development. `manifest.json` records the
+last released baseline; changes under Unreleased are not a new release.
+
+## [Unreleased]
+
+- Work in progress: replace Workspace shortcuts with a notification hub and
+  unread/DND indicator on the Home bar icon. This still has rough edges and has
+  not been tagged or released.
 
 ## [0.1.0] - 2026-11-04
 

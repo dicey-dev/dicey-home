@@ -1,13 +1,15 @@
 # Dicey Home
 
-**Alpha software (0.x).** Expect rough edges and compatibility changes.
+**Alpha software (0.x).** The tagged baseline is **v0.1.0**, before the
+notification work. Notifications on `main` are unfinished, untagged development;
+they are not a released or marketplace-ready feature. Compatibility may change.
+Omarchy updates follow `main`, not tags, so an ordinary update includes that WIP.
 
 A 720-logical-pixel command palette for Omarchy's existing application/menu
 launcher. Source, design, installation, and behavior are documented in
 [`docs/dicey-home.md`](docs/dicey-home.md).
 
-Dicey Home brings application launching, search, and desktop controls together.
-Notification-center and expanded quick-action features are planned.
+Dicey Home brings notifications, application launching, search, and desktop controls together.
 The plugin ID is **`dicey.home`**.
 This is an independent repository; no other Dicey checkout, installer, or
 synchronization service is required.
@@ -16,6 +18,13 @@ Press **Ctrl+Shift+F** inside the launcher to toggle **Dicey Home**: a native
 tile dashboard covering the entire display and bar, with real activity monitoring, MPRIS media
 controls, output volume/mute, a focus timer, and session actions. Layout and tile
 visibility are remembered across opens and shell restarts.
+
+The existing Home bar icon shows an unread count (up to **99+**), urgency and DND
+status. Click it to open Home at **Notifications**. Read the newest live/recent
+entries, filter unread, explicitly mark all read, toggle DND, or use the host's
+latest-toast/replay controls. Clearing shared history requires confirmation;
+opening Home never marks or deletes notifications. See [notification behavior
+and host limitations](docs/notifications.md).
 
 Web searches use the default browser's configured search engine, including
 custom URL engines such as Unduck. Preview results come only from that engine;
@@ -33,7 +42,7 @@ omarchy plugin enable dicey.home
 
 Uses the installed Omarchy menu, Quickshell/MPRIS, `wl-copy`, Python 3
 (standard library only), `pactl`, `nmcli`, XDG tools, and `notify-send`. `btop`,
-`ncdu`, and Obsidian tiles honor availability. Colors, fonts, borders, spacing, and rounding follow the live
+and `ncdu` controls honor availability. Colors, fonts, borders, spacing, and rounding follow the live
 global Omarchy theme. Existing menu IPC and shortcuts route to this clone.
 
 ## Development and hot reload
@@ -87,6 +96,12 @@ are unavailable when their applications are absent. `pactl` comes from
 needed for browser/file actions. See [Security boundaries](docs/security-review.md):
 search queries may go to your configured engine while typing, browser search
 preferences are read-only, and avatars/media artwork come from your session.
+Notification text is read locally from Omarchy's existing snapshot files; it is
+not sent over the network or duplicated into another history database. One
+shell-owned Python helper watches those files while Home is loaded. Only a read
+watermark is stored in Home's own preferences. Notification content renders as
+plain text; sender images, URLs and stored commands are not loaded or executed
+by the feed. Explicit toast actions are delegated to the host via public IPC.
 
 ## Rollback and removal
 
