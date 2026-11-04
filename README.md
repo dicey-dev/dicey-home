@@ -60,6 +60,32 @@ Development runs as `dicey.home.dev`, with separate preferences and without
 modifying installed `dicey.home` files. No background watcher is installed.
 See [Development](docs/development.md) for hot reload, recovery and production updates.
 
+## Compatibility, updates and privacy
+
+Tested on **Omarchy 4.0.6 / Quattro, Qt 6.12 and Quickshell 0.3.2**. The installed
+menu is adapted with checked anchors; an unsupported upstream menu falls back
+to its stock implementation instead of applying a partial transformation.
+Other Omarchy releases are not yet a tested compatibility promise.
+
+```bash
+omarchy plugin update dicey.home
+```
+
+Omarchy fetches `origin HEAD` (the remote default branch) and fast-forwards the
+installed checkout, even when detached; it does not choose a tag based on SemVer.
+See [Releases and marketplace checklist](docs/publishing.md) for releases, rollback limitations
+and migrating a manually copied install. The clone-source metadata deliberately
+keeps existing `omarchy.menu` shortcuts and stock-menu restoration working.
+
+No build, privilege elevation, background installer, additional daemon or remote
+build is required. Omarchy normally supplies the runtime tools; optional tiles
+are unavailable when their applications are absent. `pactl` comes from
+`libpulse`, `nmcli` from `networkmanager`, `wl-copy` from `wl-clipboard`, and
+`notify-send` from `libnotify`. XDG helpers and a configured default browser are
+needed for browser/file actions. See [Security boundaries](docs/security-review.md):
+search queries may go to your configured engine while typing, browser search
+preferences are read-only, and avatars/media artwork come from your session.
+
 ## Rollback and removal
 
 Restore the stock menu with `omarchy plugin enable omarchy.menu`, then use
@@ -67,6 +93,6 @@ Restore the stock menu with `omarchy plugin enable omarchy.menu`, then use
 under `$XDG_STATE_HOME/omarchy/dicey.home` (default `~/.local/state/omarchy/dicey.home`)
 and are intentionally preserved.
 
-`LICENSE` is Apache-2.0.
-Upstream attribution/license review and broader compatibility testing remain
-publishing tasks; passing development checks does not claim marketplace readiness.
+Dicey code is Apache-2.0; adapted Omarchy portions remain MIT. Preserve
+[`LICENSE`](LICENSE) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Marketplace approval is separate from local validation and is not a security audit.

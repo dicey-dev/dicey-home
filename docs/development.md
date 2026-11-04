@@ -76,6 +76,12 @@ session or failed restoration, recover with:
 scripts/dev.py restore
 ```
 
+Imported JS and QML dependencies can remain cached by the running engine. If a
+rescan appears to keep old behavior, deliberately run `omarchy restart shell`;
+always include a fresh-shell check before a release. Successful file copying
+is not by itself proof that cached code was replaced. Restart is not automatic
+on each save.
+
 The recovery journal lives under `$XDG_STATE_HOME/omarchy/development`
 (default `~/.local/state/omarchy/development`) and is kept until restoration
 succeeds. Unmanaged folders using the development ID are never overwritten.
@@ -118,9 +124,9 @@ omarchy plugin remove dicey.home
 
 `add` is for a fresh install; `update` requires a Git-managed installed copy.
 Manually copied existing installs need explicit migration, not silent overwrites.
-Preserve `$XDG_STATE_HOME/omarchy/dicey.home` preferences on removal. Before
-[marketplace submission](https://plugins.omarchy.org/publish.html), complete
-upstream licensing/attribution and native takeover/dmenu, click/Escape,
-summon/hide, fallback, restart, update/removal and missing-dependency testing.
-Keep clone metadata while replacement routing depends on it. Marketplace
-validation is not a security audit. Never commit browser databases or tokens.
+Preserve `$XDG_STATE_HOME/omarchy/dicey.home` preferences on removal. See
+[Releases and marketplace checklist](publishing.md) for upstream notices,
+SemVer, supported compatibility, verification and submission values. Repeat
+native takeover/dmenu, click/Escape, summon/hide, fallback and lifecycle checks
+for behavior changes. Clone metadata deliberately supports replacement routing.
+Marketplace validation is not a security audit. Never commit browser databases or tokens.
