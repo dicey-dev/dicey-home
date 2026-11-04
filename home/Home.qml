@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import "HomeModel.js" as Model
 import ".." as Plugin
 
@@ -25,7 +26,7 @@ FocusScope {
   readonly property real unit: Math.max(Style.space(90), (viewport.height - board.y - Style.space(48) - gap * 3) / 4.3)
   readonly property int columns: width >= Style.space(1250) ? 4 : width >= Style.space(780) ? 2 : 1
   readonly property color muted: Qt.tint(Color.menu.background, Util.alpha(Color.menu.text, 0.82))
-  readonly property color onAccent: Model.ink(Color.accent)
+  readonly property color onAccent: Model.ink(Commons.Color.accent)
   focus: active
   onActiveChanged: {
     if (active) { syncFilter(); portrait.refresh(); services.refreshWorkspaceIcons(); Qt.callLater(focusSearch) }
@@ -264,7 +265,7 @@ FocusScope {
         leftPadding: Style.space(20)
         rightPadding: Style.space(20)
         selectByMouse: true
-        background: Rectangle { color: Util.alpha(Color.menu.text, 0.035); radius: Math.min(Style.cornerRadius, Style.space(4)); border.width: Style.spacing.hairline; border.color: search.activeFocus ? Color.accent : Util.alpha(Color.menu.text, 0.18) }
+        background: Rectangle { color: Util.alpha(Color.menu.text, 0.035); radius: Math.min(Style.cornerRadius, Style.space(4)); border.width: Style.spacing.hairline; border.color: search.activeFocus ? Commons.Color.accent : Util.alpha(Color.menu.text, 0.18) }
         Keys.onPressed: function(event) {
           if (event.key === Qt.Key_Down) { home.navigate(0, 1); event.accepted = true }
           else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -332,14 +333,14 @@ FocusScope {
               tileId: "editor"; title: "Editor"; caption: "DEFAULT EDITOR"; Layout.columnSpan: 2
               iconSource: home.workspaceIcon("editor"); iconSize: Style.space(60)
               Layout.preferredHeight: home.unit * 2 + home.gap
-              tileColor: Qt.tint(Color.menu.background, Util.alpha(Color.accent, 0.15))
+              tileColor: Qt.tint(Color.menu.background, Util.alpha(Commons.Color.accent, 0.15))
               onActivated: home.runAction("editor")
               Column {
                 anchors.fill: parent
                 spacing: Style.space(10)
                 Item {
                   width: parent.width; height: editorTile.iconSize
-                  Text { visible: !editorTile.iconReady; text: "N"; color: Color.accent; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * 1.7 }
+                  Text { visible: !editorTile.iconReady; text: "N"; color: Commons.Color.accent; font.family: Style.font.menuFamily; font.pixelSize: Style.font.displayLarge * 1.7 }
                 }
                 Text { text: "Pick up where\nyou left off."; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.heading; font.weight: Font.Light }
               }
@@ -362,7 +363,7 @@ FocusScope {
               tileId: "activity"; title: "Open btop ↗"; caption: "BTOP / LIVE ACTIVITY"; Layout.columnSpan: 2
               detail: home.metrics.processes ? home.metrics.processes + " processes" : "Sampling…"
               Layout.preferredHeight: home.unit * 2 + home.gap
-              tileColor: Color.accent; foreground: home.onAccent
+              tileColor: Commons.Color.accent; foreground: home.onAccent
               enabled: !!(home.metrics.tools && home.metrics.tools.btop)
               onActivated: home.runAction("activity")
               Column {
@@ -444,8 +445,8 @@ FocusScope {
                 spacing: Style.space(6)
                 Rectangle {
                   width: parent.width; height: Math.min(Style.space(125), parent.height * 0.4)
-                  color: Qt.tint(Color.menu.background, Util.alpha(Color.accent, 0.07)); clip: true
-                  Repeater { model: 4; Rectangle { required property int index; anchors.centerIn: parent; width: Style.space(42 + index * 34); height: width; radius: width / 2; color: "transparent"; border.width: Style.spacing.hairline; border.color: Util.alpha(Color.accent, 0.3 + index * 0.15) } }
+                  color: Qt.tint(Color.menu.background, Util.alpha(Commons.Color.accent, 0.07)); clip: true
+                  Repeater { model: 4; Rectangle { required property int index; anchors.centerIn: parent; width: Style.space(42 + index * 34); height: width; radius: width / 2; color: "transparent"; border.width: Style.spacing.hairline; border.color: Util.alpha(Commons.Color.accent, 0.3 + index * 0.15) } }
                   Image { anchors.fill: parent; source: services.active && services.player ? services.player.trackArtUrl : ""; fillMode: Image.PreserveAspectCrop; asynchronous: true; visible: status === Image.Ready }
                 }
                 Text { width: parent.width; text: services.player ? services.player.trackTitle || "Untitled track" : "Nothing playing"; textFormat: Text.PlainText; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.heading; elide: Text.ElideRight }
@@ -491,7 +492,7 @@ FocusScope {
             }
             Tile {
               tileId: "focus"; title: "Focus session"; caption: "FOCUS"; interactive: false; Layout.preferredHeight: home.unit * 1.3
-              tileColor: Qt.tint(Color.menu.background, Util.alpha(Color.accent, 0.12))
+              tileColor: Qt.tint(Color.menu.background, Util.alpha(Commons.Color.accent, 0.12))
               Column {
                 anchors.fill: parent; spacing: Style.space(6)
                 Text { text: home.controller ? Model.elapsed(home.controller.focusRemaining) : "25:00"; color: Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.display }

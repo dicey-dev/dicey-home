@@ -150,7 +150,7 @@ function transform(source, searchUrl, helperUrl) {
       home: diceyHome.inspect(),
       count: displayModel.count, rows: rows,
       selected: root.selectedIndex, webStatus: root.diceyWebStatus, webEngine: root.diceyEngine,
-      background: String(root.background), foreground: String(root.foreground), accent: String(Color.accent),
+      background: String(root.background), foreground: String(root.foreground), accent: String(Commons.Color.accent),
       profile: {username: diceyProfile.username, initials: diceyProfile.initials, picture: diceyProfile.picturePath, ready: diceyProfile.pictureReady}}
   }
 
@@ -280,7 +280,7 @@ function transform(source, searchUrl, helperUrl) {
             anchors.verticalCenter: diceyProfile.verticalCenter
             text: "DICEY  /  " + (root.activeMenu === "root" ? "COMMAND PALETTE" : root.pathFor(root.activeMenu).toUpperCase())
             textFormat: Text.PlainText
-            color: Color.accent
+            color: Commons.Color.accent
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.weight: Font.DemiBold
@@ -304,7 +304,7 @@ function transform(source, searchUrl, helperUrl) {
             radius: root.cornerRadius
             color: root.dmenuActive ? "transparent" : Util.alpha(root.foreground, 0.045)
             border.width: root.dmenuActive ? 0 : Style.spacing.hairline
-            border.color: Util.alpha(Color.accent, 0.35)
+            border.color: Util.alpha(Commons.Color.accent, 0.35)
             Text {
               id: diceySearchIcon
               visible: !root.dmenuActive
@@ -314,7 +314,7 @@ function transform(source, searchUrl, helperUrl) {
               text: "⌕"
               font.family: root.fontFamily
               font.pixelSize: Style.font.displayLarge
-              color: Color.accent
+              color: Commons.Color.accent
             }
             Text {
               textFormat: Text.PlainText
@@ -340,7 +340,7 @@ function transform(source, searchUrl, helperUrl) {
                 anchors.leftMargin: Style.space(12)
                 anchors.verticalCenter: parent.verticalCenter
                 text: section === "web" ? "WEB RESULTS" : section === "calculator" ? "CALCULATOR" : "MORE MATCHES"
-                color: Color.accent
+                color: Commons.Color.accent
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.letterSpacing: Style.space(1)
@@ -350,7 +350,7 @@ function transform(source, searchUrl, helperUrl) {
   replace('                visible: false\n                width: Style.space(4)',
     '                visible: row.hasCursor && !root.dmenuActive\n                width: Style.space(3)')
   replace('                color: root.selectedBackground\n                anchors.left: parent.left',
-    '                color: Color.accent\n                anchors.left: parent.left')
+    '                color: Commons.Color.accent\n                anchors.left: parent.left')
   replace('                  color: root.foreground\n                  opacity: 0.52',
     '                  color: row.hasCursor ? root.selectedText : root.foreground\n                  opacity: 0.65')
   replace('                width: Style.space(14)\n                anchors.right: parent.right',
@@ -400,14 +400,14 @@ function transform(source, searchUrl, helperUrl) {
             radius: Math.min(root.cornerRadius, Style.space(6))
             enabled: !root.deleteConfirmOpen
             opacity: enabled ? 1 : 0.45
-            color: Util.alpha(Color.accent, diceyLayoutMouse.containsMouse ? 0.18 : 0.08)
+            color: Util.alpha(Commons.Color.accent, diceyLayoutMouse.containsMouse ? 0.18 : 0.08)
             border.width: Style.spacing.hairline
-            border.color: Util.alpha(Color.accent, 0.3)
+            border.color: Util.alpha(Commons.Color.accent, 0.3)
             Text {
               id: diceyLayoutLabel
               anchors.centerIn: parent
               text: "Ctrl+Shift+F · Dicey Home"
-              color: Color.accent
+              color: Commons.Color.accent
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
             }

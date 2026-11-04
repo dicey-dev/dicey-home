@@ -8,6 +8,7 @@ case "${1:-}" in
     python3 -B -m unittest discover -s tests -p 'test_*.py'
     node tests/test_launcher.js
     node tests/test_home.js
+    python3 -B scripts/version.py check
     ;;
   --compat)
     # This layer intentionally requires the actual installed Omarchy menu.
