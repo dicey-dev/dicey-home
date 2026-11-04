@@ -1,5 +1,5 @@
 // Pure data helpers shared by the native tiles and regression checks.
-var tileIds = ["editor", "terminal", "browser", "files", "notes", "activity", "network", "storage", "media", "volume", "focus", "clock", "quiet", "wifi", "appearance", "lock"]
+var tileIds = ["activity", "network", "storage", "media", "volume", "focus", "clock", "quiet", "wifi", "appearance", "lock"]
 function normalizeHidden(values) {
   if (!Array.isArray(values)) return []
   return values.filter(function(id, index) { return tileIds.indexOf(id) >= 0 && values.indexOf(id) === index })

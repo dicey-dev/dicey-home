@@ -9,10 +9,6 @@ Item {
   property var metrics: ({})
   property var cpuHistory: []
   property string selectedPlayer: ""
-  property var workspaceIcons: ({})
-  function refreshWorkspaceIcons() {
-    if (!workspaceLookup.running) workspaceLookup.running = true
-  }
   readonly property string helper: decodeURIComponent(String(Qt.resolvedUrl("../activity.py")).slice(7))
   readonly property var players: Mpris.players ? Mpris.players.values : []
   readonly property var player: {
@@ -46,15 +42,6 @@ Item {
   }
   function volume(value) { Quickshell.execDetached(["python3", "-B", helper, "--volume", String(Math.round(Math.max(0, Math.min(100, value))))]) }
   function mute() { Quickshell.execDetached(["python3", "-B", helper, "--mute"]) }
-  Process {
-    id: workspaceLookup
-    command: ["python3", "-B", decodeURIComponent(String(Qt.resolvedUrl("../workspace_icons.py")).slice(7))]
-    stdout: StdioCollector { id: workspaceOutput; waitForEnd: true }
-    onExited: function(code) {
-      if (code !== 0) return
-      try { services.workspaceIcons = JSON.parse(workspaceOutput.text) } catch (error) {}
-    }
-  }
   Process {
     id: sampler
     command: ["python3", "-B", services.helper, "--watch"]

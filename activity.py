@@ -96,7 +96,7 @@ class Sampler:
         self.cpu = {}
         self.net = {}
         self.at = None
-        self.tools = {name: bool(shutil.which(name)) for name in ("btop", "ncdu", "obsidian")}
+        self.tools = {name: bool(shutil.which(name)) for name in ("btop", "ncdu")}
 
     def snapshot(self):
         at = time.monotonic()

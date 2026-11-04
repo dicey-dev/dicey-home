@@ -64,7 +64,7 @@ Every half second, content changes/new directories/deletions are detected.
 Each update is validated before replacing the last valid development copy;
 Omarchy handles hot reload. Tooling, docs, tests, hidden directories and mockups
 are not copied; symlinks are rejected. Runtime file selection currently covers
-QML/JS/Python/JSON and license files; extend it deliberately for new asset formats.
+QML/JS/Python/JSON, QML `qmldir` declarations and license files; extend it deliberately for new asset formats.
 
 Ctrl+C/SIGTERM restores the previously enabled menu and removes the development
 copy. No background service is installed, and a per-plugin lock prevents two
@@ -103,6 +103,10 @@ run them only in an idle graphical test session, never on every save:
 python3 -B tests/verify_launcher_layout.py
 python3 -B tests/verify_launcher_performance.py
 python3 -B tests/verify_home.py
+# During scripts/dev.py start; sends only synthetic notifications:
+DICEY_PLUGIN_ID=dicey.home.dev python3 -B tests/verify_notifications.py
+# With no active dev session; starts/restores a temporary .dev fixture session:
+python3 -B tests/verify_notification_fixtures.py
 ```
 
 These require `wtype`; the media fixture additionally needs `python-dbus` and
@@ -110,6 +114,17 @@ These require `wtype`; the media fixture additionally needs `python-dbus` and
 interpreter through `sys.executable`. Do not globally pip-install native system
 bindings. Native scripts target production by default; set `DICEY_PLUGIN_ID` to
 `dicey.home.dev` to inspect a development session.
+
+Notification proof explicitly requires `.dev`. It removes only its uniquely
+prefixed synthetic popup files **before** dismissal/action, so archiving cannot
+trim real history. It aborts latest-toast tests if any real popup is present and
+compares real history hashes before/after. Run on a quiet desktop: the public
+latest-toast API inherently targets whatever is newest at execution time.
+Shared history clearing and DND/filter/count UI are tested against a synthetic
+singleton substituted only in a temporary runtime snapshot, inside the same
+shell. The fixture makes no notification IPC or history writes. Screenshots,
+when requested via `DICEY_FIXTURE_SCREENSHOT`, stay outside Git; media/profile
+surfaces may still contain session information. Never commit private captures.
 
 Production is installed and updated deliberately, independently of source edits:
 

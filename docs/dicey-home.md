@@ -21,9 +21,9 @@ control, to switch between the compact launcher and **Dicey Home**. The native
 tile surface fills the entire display, covering the bar as well as the workspace.
 Colors, typography, spacing, and rounding follow the global theme.
 
-The four groups are **Workspace**, **The machine**, **In the flow**, and **Make
-space**. Workspace tiles use the configured editor, terminal, browser, and file
-manager; Notes uses Obsidian when installed. **All apps** displays the stock
+The four groups are **Notifications**, **The machine**, **In the flow**, and **Make
+space**. The notification feed replaces the old daily-tool Workspace shortcuts;
+applications remain available through search and **All apps**. **All apps** displays the stock
 application library as tiles. Search uses the original ranking, routes,
 calculator, and browser-default web search. Enter in search opens the first
 match; Down enters the tile grid, arrows navigate spatially, and Enter opens a
@@ -31,10 +31,9 @@ tile or focuses a widget's controls. Delete on an application result uses the
 stock uninstall confirmation.
 
 Application tiles display their desktop-entry icons through the shared Omarchy
-icon resolver. Workspace shortcut icons are resolved from the configured editor,
-terminal, browser, and directory handler, with Obsidian's icon for Notes. Images
+icon resolver. Images
 load asynchronously at the display's pixel density; missing or unreadable icons
-retain the fallback glyph. Icon discovery runs once per open, not per keystroke.
+retain the fallback glyph. The obsolete Workspace icon-discovery helper has been removed.
 
 The home explicitly tracks the overlay surface's full width **and height** and
 ignores bar exclusion zones. Dashboard tile sizes use the remaining viewport height rather than a

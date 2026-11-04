@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const model = require('../home/HomeModel.js');
 
-assert.deepEqual(model.normalizeHidden(['media', 'media', '../../file', 'browser', 42]), ['media', 'browser']);
+assert.deepEqual(model.normalizeHidden(['media', 'media', '../../file', 'browser', 42]), ['media']);
 assert.deepEqual(model.normalizeHidden(null), []);
 assert.equal(model.focusRemaining(1025000, 1500, 1000000), 25);
 assert.equal(model.focusRemaining(990000, 1500, 1000000), 0);
