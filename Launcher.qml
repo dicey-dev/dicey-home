@@ -33,6 +33,7 @@ Item {
   readonly property string layoutStatePath: layoutStateDirectory + "/layout.json"
   readonly property var applicationApi: host.shell && host.shell.appLibrary ? host.shell.appLibrary : localApps.item
   readonly property var menuApi: ({appLibrary: host.applicationApi, launcherFullscreen: host.fullscreen,
+    summon: function(id, payload) { return !!(host.shell && host.shell.summon && host.shell.summon(id, payload)) },
     homeController: host, toggleLauncherLayout: function() { return host.toggleHome() }})
 
   onFullscreenChanged: {

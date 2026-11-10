@@ -104,8 +104,9 @@ try:
     assert normal["layout"] == "normal" and normal["width"] < normal["screenWidth"], normal
     normal_width = normal["width"]
 
-    call("search", "24 * 7")
-    searched = state()
+    time.sleep(0.15)  # Let the layer-surface keyboard focus settle before input.
+    command("wtype", "24 * 7")
+    searched = wait_for(lambda current: current.get("filter") == "24 * 7")
     assert searched["rows"][0]["label"] == "168", searched
     time.sleep(0.15)  # Let the layer-surface keyboard focus settle before input.
     command("wtype", "-M", "ctrl", "-M", "shift", "-k", "f", "-m", "shift", "-m", "ctrl")
@@ -124,11 +125,14 @@ try:
     print("Ctrl+Shift+F fills the entire screen, covering the bar while preserving search and selection.")
 
     command("omarchy-shell", "shell", "hide", "omarchy.menu")
-    apps = open_menu("apps")
+    # Newer Omarchy versions make Apps an action opening the stock dock, not
+    # a menu route. Reopen root there; preserve coverage of the old Apps menu.
+    apps_route = "root" if any(row["id"] == "apps" and row["kind"] == "action" for row in initial["rows"]) else "apps"
+    apps = open_menu(apps_route)
     assert apps["layout"] == "home" and apps["width"] == apps["screenWidth"], apps
     assert apps["height"] == apps["screenHeight"], apps
     assert apps["hasAppLibrary"] and apps["count"] > 0, apps
-    print("Closing and reopening Apps restores Dicey Home.")
+    print("Closing and reopening the launcher restores Dicey Home.")
 
     command("omarchy-shell", "shell", "hide", "omarchy.menu")
     compact = open_menu(mode="select", prompt="Layout check", options=["One", "Two"], width=360)
