@@ -9,10 +9,16 @@ function transform(source, searchUrl, helperUrl) {
     source = source.replace(before, after)
   }
   var pluginDirectory = searchUrl.slice(0, searchUrl.lastIndexOf("/"))
+  var nativeInput = source.indexOf('            id: filterInput') >= 0
+  var focusTarget = nativeInput ? "filterInput" : "keyCatcher"
+  if (source.indexOf('import qs.Commons as Commons') < 0)
+    replace('import qs.Commons\n', 'import qs.Commons\nimport qs.Commons as Commons\n')
   replace('import QtQuick', 'import QtQuick\nimport "' + searchUrl + '" as DiceySearch\nimport "' + pluginDirectory + '" as Dicey\nimport "' + pluginDirectory + '/home" as DiceyHome')
   replace('  function open(payloadJson) {', '  function open(payloadJson) {\n    diceyProfile.refresh()\n    root.diceyProbeEngine()')
+  if (nativeInput) replace('  onFilterTextChanged: if (filterInput.text !== filterText) filterInput.text = filterText',
+    '  onFilterTextChanged: { if (filterInput.text !== filterText) filterInput.text = filterText; root.diceyQueueWeb() }')
   replace('  property string filterText: ""', `  property string filterText: ""
-  onFilterTextChanged: root.diceyQueueWeb()
+  ${nativeInput ? "" : "onFilterTextChanged: root.diceyQueueWeb()"}
   readonly property bool diceySearchActive: !root.dmenuActive && (root.activeMenu === "root" || root.activeMenu === "apps")
   readonly property int diceyFooterHeight: root.dmenuActive ? 0 : Style.space(48)
   readonly property bool diceyFullscreen: !!(root.shell && root.shell.launcherFullscreen)
@@ -26,7 +32,7 @@ function transform(source, searchUrl, helperUrl) {
     Qt.callLater(function() {
       if (!root.opened) return
       if (root.diceyFullscreenActive) diceyHome.focusSearch()
-      else keyCatcher.forceActiveFocus()
+      else ${focusTarget}.forceActiveFocus()
       root.revealCursor()
     })
   }
@@ -205,7 +211,10 @@ function transform(source, searchUrl, helperUrl) {
   replace('  property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)',
     '  property int headerHeight: root.dmenuActive ? Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2) : Style.space(104)')
   replace('  property int dividerHeight: Style.space(17)', '  property int dividerHeight: Style.space(28)')
-  replace('  property int cardWidth: Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : ((root.activeMenu === "trigger.capture.screenrecord" || root.activeMenu === "style.font") ? Style.space(520) : Style.space(300)), panel.width - Style.gapsOut * 2)',
+  // Width-only route additions do not change the adapter's layout contract.
+  var cardWidth = source.match(/^  property int cardWidth: Math\.min\(root\.dmenuActive \? Style\.space\(root\.dmenuWidth\) : .*?, panel\.width - Style\.gapsOut \* 2\)$/gm)
+  if (!cardWidth || cardWidth.length !== 1) throw new Error("Unsupported Omarchy menu anchor: cardWidth")
+  replace(cardWidth[0],
     '  property int cardWidth: root.diceyFullscreenActive ? panel.width : Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : Style.space(720), panel.width - Math.max(Style.gapsOut * 2, Style.space(32)))')
   replace('  property int visibleRowsHeight: root.dmenuActive ? dmenuRowListHeight(layoutSerial, displayModel.count, filterText) : rowListHeight(layoutSerial, displayModel.count, filterText, searchDivider)',
     '  property int visibleRowsHeight: root.diceyFullscreenActive ? Math.max(0, panel.height - card.contentTopInset - card.contentBottomInset - root.headerHeight - root.contentSpacing * 2 - root.diceyFooterHeight) : root.dmenuActive ? dmenuRowListHeight(layoutSerial, displayModel.count, filterText) : rowListHeight(layoutSerial, displayModel.count, filterText, searchDivider)')
@@ -228,9 +237,9 @@ function transform(source, searchUrl, helperUrl) {
       controller: root.shell ? root.shell.homeController : null
     }
     Connections {
-      target: keyCatcher
+      target: ${focusTarget}
       function onActiveFocusChanged() {
-        if (keyCatcher.activeFocus && root.diceyFullscreenActive) Qt.callLater(diceyHome.focusSearch)
+        if (${focusTarget}.activeFocus && root.diceyFullscreenActive) Qt.callLater(diceyHome.focusSearch)
       }
     }
     BorderSurface {
@@ -263,7 +272,32 @@ function transform(source, searchUrl, helperUrl) {
       if (DiceySearch.safeUrl(row.action)) Quickshell.execDetached(["omarchy", "launch", "browser", row.action])
       root.cancel()
     } else if (row.kind === "menu" || row.kind === "link") {`)
-  replace(`          Text {
+  replace(nativeInput ? `          FilterInput {
+            id: filterInput
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            keyHandler: keyCatcher
+            // Input-method commits bypass key handling, so the dialog has to refuse them here.
+            readOnly: root.deleteConfirmOpen
+            color: root.foreground
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.heading
+            onTextChanged: if (text !== root.filterText) root.setFilter(text)
+          }
+
+          Text {
+            textFormat: Text.PlainText
+            anchors.fill: filterInput
+            verticalAlignment: Text.AlignVCenter
+            visible: !root.filterText && !filterInput.preeditText
+            text: root.dmenuActive ? (root.dmenuPrompt + "…") : ((root.item(root.activeMenu) ? (root.item(root.activeMenu).title || root.item(root.activeMenu).label) : "Go") + "…")
+            color: root.foreground
+            opacity: 0.58
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.heading
+            elide: Text.ElideRight
+          }` : `          Text {
             textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.right: parent.right
@@ -316,20 +350,35 @@ function transform(source, searchUrl, helperUrl) {
               font.pixelSize: Style.font.displayLarge
               color: Commons.Color.accent
             }
-            Text {
-              textFormat: Text.PlainText
+            ${nativeInput ? "FilterInput" : "Text"} {
+              ${nativeInput ? `id: filterInput
+              keyHandler: keyCatcher
+              readOnly: root.deleteConfirmOpen
+              onTextChanged: if (text !== root.filterText) root.setFilter(text)` : "textFormat: Text.PlainText"}
               anchors.left: root.dmenuActive ? parent.left : diceySearchIcon.right
               anchors.leftMargin: root.dmenuActive ? 0 : Style.space(14)
               anchors.right: parent.right
               anchors.rightMargin: root.dmenuActive ? 0 : Style.space(18)
               anchors.verticalCenter: parent.verticalCenter
-              text: root.filterText || (root.dmenuActive ? root.dmenuPrompt + "…" : (root.diceySearchActive ? "Search apps, commands, web or calculate…" : "Search " + (root.item(root.activeMenu) ? root.item(root.activeMenu).label.toLowerCase() : "menu") + "…"))
+              text: ${nativeInput ? "root.filterText" : 'root.filterText || (root.dmenuActive ? root.dmenuPrompt + "…" : (root.diceySearchActive ? "Search apps, commands, web or calculate…" : "Search " + (root.item(root.activeMenu) ? root.item(root.activeMenu).label.toLowerCase() : "menu") + "…"))'}
               color: root.foreground
-              opacity: root.filterText ? 1 : 0.58
+              opacity: ${nativeInput ? "1" : "root.filterText ? 1 : 0.58"}
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.heading
+              ${nativeInput ? "" : "elide: Text.ElideRight"}
+            }
+            ${nativeInput ? `Text {
+              textFormat: Text.PlainText
+              anchors.fill: filterInput
+              verticalAlignment: Text.AlignVCenter
+              visible: !root.filterText && !filterInput.preeditText
+              text: root.dmenuActive ? root.dmenuPrompt + "…" : (root.diceySearchActive ? "Search apps, commands, web or calculate…" : "Search " + (root.item(root.activeMenu) ? root.item(root.activeMenu).label.toLowerCase() : "menu") + "…")
+              color: root.foreground
+              opacity: 0.58
               font.family: root.fontFamily
               font.pixelSize: Style.font.heading
               elide: Text.ElideRight
-            }
+            }` : ""}
           }`)
   replace('              height: section === "drilldown" ? root.dividerHeight : 0\n              visible: section === "drilldown"',
     '              height: section ? root.dividerHeight : 0\n              visible: !!section')
@@ -355,8 +404,9 @@ function transform(source, searchUrl, helperUrl) {
     '                  color: row.hasCursor ? root.selectedText : root.foreground\n                  opacity: 0.65')
   replace('                width: Style.space(14)\n                anchors.right: parent.right',
     '                width: Style.space(26)\n                anchors.right: parent.right')
-  replace('                  text: row.kind === "menu" || row.kind === "link" ? "›" : ""',
-    '                  text: row.kind === "menu" || row.kind === "link" ? "›" : row.kind === "calculator" ? "⧉" : row.kind.indexOf("web-") === 0 ? "↗" : row.hasCursor ? "↵" : ""')
+  var menuArrow = source.indexOf('(Commons.I18n.rightToLeft ? "‹" : "›")') >= 0 ? '(Commons.I18n.rightToLeft ? "‹" : "›")' : '"›"'
+  replace('                  text: row.kind === "menu" || row.kind === "link" ? ' + menuArrow + ' : ""',
+    '                  text: row.kind === "menu" || row.kind === "link" ? ' + menuArrow + ' : row.kind === "calculator" ? "⧉" : row.kind.indexOf("web-") === 0 ? "↗" : row.hasCursor ? "↵" : ""')
   replace('                  opacity: row.kind === "menu" || row.kind === "link" ? 0.36 : 0',
     '                  opacity: 0.55')
   replace(`        Item {
