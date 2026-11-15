@@ -71,45 +71,56 @@ with tempfile.TemporaryDirectory(prefix="dicey-notification-ui-", dir="/tmp/open
         else:
             raise AssertionError("Development fixture startup timed out")
         command("omarchy", "restart", "shell")
-        wait(lambda s: s["notifications"].get("count") == 105)
+        wait(lambda s: s["notifications"].get("count") == 60)
         command("omarchy-shell", "shell", "summon", "dicey.home.dev", '{"menu":"root","view":"notifications"}')
         state = wait(lambda s: s.get("home", {}).get("notificationView", {}).get("focused"))
-        assert state["notifications"]["badge"] == "99+" and state["notifications"]["urgent"]
-        # Tab from filter -> read -> DND -> feed, then read older entries.
-        command("wtype", "-k", "Tab", "-k", "Tab", "-k", "Tab", "-k", "Next")
+        groups = state["notifications"]["groups"]
+        assert groups[0] == "app:synthetic-mail" and "site:news.example.com" in groups and "webapp:web.whatsapp.com" in groups, groups
+        keys = state["notifications"]["keys"]
+        assert keys[0] == "synthetic-0" and keys[1] == "synthetic-4", keys  # Grouped, newest first.
+        print("PASS grouping: apps, browser sites and installed web apps form contiguous newest-first groups.")
+        # The payload focuses the feed itself. Read older entries, then arrive.
+        command("wtype", "-k", "Next", "-k", "Down", "-k", "Down")
         before = wait(lambda s: s["home"]["notificationView"]["feed"]["topKey"] not in ("", "synthetic-0"))["home"]["notificationView"]["feed"]
-        call("paneAction", "notifications:replay")  # Fixture-only snapshot arrival/archive.
-        after = wait(lambda s: s["notifications"]["count"] == 106)["home"]["notificationView"]["feed"]
+        call("paneAction", "notifications:dndOn")  # Fixture-only arrival + live-to-history update.
+        after = wait(lambda s: s["notifications"]["count"] == 61)["home"]["notificationView"]["feed"]
         assert after["topKey"] == before["topKey"] and abs(after["offset"] - before["offset"]) < 1, (before, after)
         assert after["currentKey"] == before["currentKey"], (before, after)
         print("PASS native scroll/current-key preservation across arrival + live-to-history update.")
-        assert call("paneAction", "notifications:confirmClear") == "unavailable"
-        assert call("paneAction", "notifications:clearHistory") == "unavailable"
-        assert call("paneAction", "notifications:requestClear") == "confirm"
-        wait(lambda s: s["home"]["notificationView"]["confirmingClear"])
-        # Cancel has default focus. Enter must cancel, not delete.
-        command("wtype", "-k", "Return")
-        wait(lambda s: not s["home"]["notificationView"]["confirmingClear"])
-        assert json.loads(call("inspect"))["notifications"]["count"] == 106
-        call("paneAction", "notifications:requestClear")
-        command("wtype", "-k", "Tab", "-k", "Return")
-        state = wait(lambda s: s["notifications"]["count"] == 1)
-        assert state["notifications"]["lastCommand"] == "clearHistory" and state["notifications"]["liveCount"] == 1
-        print("PASS isolated native clear: default Enter cancels; Tab+Enter confirms; live entry retained.")
-        call("paneAction", "notifications:dndOn")
-        wait(lambda s: s["notifications"]["dnd"] is True)
+        # Delete removes the selected entry; Shift+Delete clears its group.
+        selected = after["currentKey"]
+        order = json.loads(call("inspect"))["notifications"]["keys"]
+        successor = order[order.index(selected) + 1]
+        command("wtype", "-k", "Delete")
+        state = wait(lambda s: s["notifications"]["count"] == 60)
+        assert selected not in state["notifications"]["keys"], state["notifications"]
+        assert state["home"]["notificationView"]["feed"]["currentKey"] == successor, (successor, state["home"]["notificationView"]["feed"])
+        before_groups = state["notifications"]["groups"]  # Includes the fixture arrival's group.
+        command("wtype", "-M", "shift", "-k", "Delete", "-m", "shift")
+        state = wait(lambda s: len(s["notifications"]["groups"]) == len(before_groups) - 1)
+        assert state["notifications"]["count"] < 59, state["notifications"]
+        print("PASS keyboard removal: Delete removes one entry, Shift+Delete clears that entry's group.")
+        assert call("paneAction", "notifications:remove:missing") == "unavailable"
+        assert call("paneAction", "notifications:clearGroup:app:missing") == "unavailable"
+        assert call("paneAction", "notifications:clearGroup:__proto__") == "unavailable"
+        first = state["notifications"]["keys"][0]
+        assert call("paneAction", "notifications:remove:" + first) == "ok"
+        site = next(g for g in state["notifications"]["groups"] if g.startswith("site:"))
+        assert call("paneAction", "notifications:clearGroup:" + site) == "ok"
+        state = wait(lambda s: site not in s["notifications"]["groups"])
+        assert first not in state["notifications"]["keys"]
         call("paneAction", "notifications:dndOff")
         wait(lambda s: s["notifications"]["dnd"] is False)
-        call("paneAction", "notifications:read")
-        wait(lambda s: s["notifications"]["unread"] == 0)
-        # Exercise the actual first filter button via its payload-provided focus.
-        call("paneAction", "notifications:view")
-        command("wtype", "-k", "Return")
-        wait(lambda s: s["home"]["notificationView"]["unreadOnly"])
-        print("PASS isolated count cap, urgency, DND toggle, read/filter and empty-unread state.")
         screenshot = os.environ.get("DICEY_FIXTURE_SCREENSHOT")
         if screenshot:
             command("grim", screenshot)
+        assert call("paneAction", "notifications:clearAll") == "ok"
+        state = wait(lambda s: s["notifications"]["count"] == 0)
+        assert state["notifications"]["total"] == 61 and call("paneAction", "notifications:clearAll") == "unavailable"
+        print("PASS isolated per-entry/group/all removal, DND toggle and empty state; fixture rows are only hidden.")
+        empty = os.environ.get("DICEY_FIXTURE_EMPTY_SCREENSHOT")
+        if empty:
+            command("grim", empty)
     finally:
         command("omarchy-shell", "shell", "hide", "dicey.home.dev")
         process.send_signal(signal.SIGTERM)

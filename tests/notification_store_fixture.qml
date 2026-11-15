@@ -4,49 +4,60 @@ import Quickshell
 import "NotificationModel.js" as Model
 
 // TEST ONLY: copied over the singleton in a temporary .dev source snapshot.
-// No IPC, host snapshot access, persistence, notification server or subprocess.
+// No IPC, host state access, persistence, notification server or subprocess.
 Singleton {
   id: fixture
   property var fixtureRows: []
-  property var readCursor: ({timestamp: 0, keys: []})
-  property bool dnd: false
+  property var removedKeys: ({})
+  property var dnd: false
   property string lastCommand: ""
   readonly property bool ready: true
   readonly property bool hostAvailable: true
   readonly property bool commandPending: false
   readonly property string commandError: ""
-  readonly property var rows: fixtureRows
-  readonly property var snapshot: ({ready: true, rows: rows, dnd: dnd, warning: false, error: ""})
-  readonly property int unreadCount: Model.count(rows, readCursor)
-  readonly property string badge: Model.badge(unreadCount)
-  readonly property bool urgent: rows.some(function(row) { return row.urgency === 2 && fixture.isUnread(row) })
-  function isUnread(row) { return Model.unread(row, readCursor) }
-  function markRead() { readCursor = Model.markRead(rows, readCursor); return "ok" }
+  readonly property var snapshot: ({ready: true, rows: fixtureRows, warning: false, error: ""})
+  readonly property var arranged: Model.arrange(Model.visible(fixtureRows, removedKeys))
+  readonly property var rows: arranged.rows
+  readonly property var groups: arranged.groups
+  function remove(keys) { removedKeys = Model.remove(removedKeys, keys, Date.now()); return "ok" }
+  function removeOne(key) { return rows.some(function(row) { return row.key === key }) ? remove([key]) : "unavailable" }
+  function removeGroup(id) { return Object.prototype.hasOwnProperty.call(groups, id) ? remove(groups[id].keys) : "unavailable" }
+  function removeAll() { return rows.length ? remove(rows.map(function(row) { return row.key })) : "unavailable" }
+  function entry(key, minutes, app, source, extra) {
+    var browser = /^(Chromium|Firefox)$/.test(app) ? app : ""
+    var site = browser && source ? source : ""
+    var group = site === "web.whatsapp.com" ? "webapp:" + site : site ? "site:" + site : "app:" + app.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    return Object.assign({key: key, timestamp: Date.now() - minutes * 60000, app: app, summary: "Synthetic update " + key,
+      body: "Synthetic message for grouping, scroll and removal testing.", urgency: 1, live: false, group: group,
+      groupLabel: site === "web.whatsapp.com" ? "WhatsApp" : site || app, groupKind: group.split(":")[0], browser: browser}, extra || {})
+  }
   function run(action) {
     if (!Model.command(action)) return "unavailable"
     lastCommand = action
-    if (action === "dndOn") dnd = true
-    if (action === "dndOff") dnd = false
-    if (action === "replay") {
-      var updated = rows.map(function(row) { return Object.assign({}, row) })
-      updated[0].live = false  // An ordinary live-to-history transition.
-      updated.unshift({key: "synthetic-new", timestamp: Date.now(), app: "Synthetic app",
-        summary: "Synthetic arrival while reading", body: "Only fixture data.", live: false, urgency: 1})
+    dnd = action === "dndOn"
+    if (action === "dndOn") {
+      // Fixture-only arrival in a new group above everything else, plus a
+      // live-to-history transition, to prove the feed keeps its position.
+      var updated = fixtureRows.map(function(row) { return Object.assign({}, row) })
+      updated[0].live = false
+      updated.unshift(entry("synthetic-new", -1, "Synthetic arrival"))
       fixtureRows = updated
     }
-    if (action === "clearHistory") fixtureRows = rows.filter(function(row) { return row.live })
     return "ok"
   }
-  function inspect() { return {ready: true, count: rows.length, unread: unreadCount, badge: badge,
-    urgent: urgent, dnd: dnd, pending: false, lastCommand: lastCommand,
+  function inspect() { return {ready: true, count: rows.length, total: fixtureRows.length, removed: Object.keys(removedKeys).length,
+    groups: arranged.order, dnd: dnd, pending: false, lastCommand: lastCommand, keys: rows.map(function(row) { return row.key }),
     liveCount: rows.filter(function(row) { return row.live }).length, error: ""} }
   Component.onCompleted: {
-    var values = []
-    for (var i = 0; i < 105; i++) values.push({key: "synthetic-" + i,
-      timestamp: Date.now() - i * 60000, app: "Synthetic app " + i,
-      summary: i === 0 ? "A synthetic urgent notification" : "Synthetic update " + i,
-      body: i === 0 ? "Only fixture data. <b>This is plain text.</b>\nA long message wraps within the feed, without links, images or executable content." : "Synthetic message for scroll and count testing.",
-      live: i === 0 || i === 104, urgency: i === 0 ? 2 : 1})
+    var values = [entry("synthetic-0", 0, "Synthetic mail", "", {urgency: 2, live: true, summary: "A synthetic urgent notification",
+      body: "Only fixture data. <b>This is plain text.</b>\nA long message wraps within the feed, without links, images or executable content."})]
+    for (var i = 1; i < 60; i++) {
+      var kind = i % 4
+      values.push(kind === 0 ? entry("synthetic-" + i, i, "Synthetic mail")
+        : kind === 1 ? entry("synthetic-" + i, i, "Chromium", "news.example.com")
+        : kind === 2 ? entry("synthetic-" + i, i, "Firefox", "web.whatsapp.com")
+        : entry("synthetic-" + i, i, "Synthetic chat " + (i % 3)))
+    }
     fixtureRows = values
   }
 }

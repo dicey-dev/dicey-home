@@ -1,8 +1,10 @@
-"""Deliberate native .dev proof; only synthetic notification files are removed.
+"""Deliberate native .dev proof against the real Omarchy notification service.
 
-Requires an active scripts/dev.py session, wtype, notify-send and a quiet test
-desktop. Never invokes shared clear/replay or dismisses real notifications.
-Synthetic files are unlinked BEFORE dismiss/action, avoiding host history trim.
+Requires an active `scripts/dev.py start` session, notify-send and grim. It
+sends a few uniquely prefixed synthetic notifications (they expire into the
+host's own history, which keeps them at most 24 hours) and never clears,
+dismisses or writes the host's notification files. Real entries must be
+byte-for-byte unchanged afterwards.
 """
 import hashlib
 import json
@@ -14,12 +16,14 @@ import time
 PLUGIN = os.environ.get("DICEY_PLUGIN_ID", "")
 if PLUGIN != "dicey.home.dev":
     raise SystemExit("Run only with DICEY_PLUGIN_ID=dicey.home.dev and an active dev session.")
-PREFIX = "Dicey synthetic proof " + str(time.time_ns())
-STATE = Path.home() / ".local/state/omarchy/notifications"
+RUN = str(time.time_ns())
+PREFIX = "Dicey synthetic proof " + RUN
+STORE = Path.home() / ".local/state/omarchy/notifications"
+SCREENSHOT = os.environ.get("DICEY_PROOF_SCREENSHOT", "")
 
 
 def command(*args):
-    return subprocess.run(args, check=True, capture_output=True, text=True, timeout=15).stdout.strip()
+    return subprocess.run(args, check=True, capture_output=True, text=True, timeout=20).stdout.strip()
 
 
 def call(method, argument=""):
@@ -30,7 +34,7 @@ def state():
     return json.loads(call("inspect"))
 
 
-def wait(predicate, timeout=12):
+def wait(predicate, timeout=20):
     deadline = time.monotonic() + timeout
     current = {}
     while time.monotonic() < deadline:
@@ -40,109 +44,80 @@ def wait(predicate, timeout=12):
                 return current
         except (ValueError, subprocess.SubprocessError):
             pass
-        time.sleep(.08)
+        time.sleep(.1)
     raise AssertionError(current)
 
 
-def synthetic_files():
-    result = []
-    for directory in (STATE, STATE / "history"):
-        for path in directory.glob("*.json"):
-            try:
-                row = json.loads(path.read_text())
-                if row.get("summary", "").startswith(PREFIX):
-                    result.append((path, row))
-            except (OSError, ValueError):
-                pass
-    return result
+def host_rows():
+    rows = []
+    for name in ("history.json", "live.json"):
+        raw = (STORE / name).read_text()
+        rows += json.loads(raw) if raw.strip() else []
+    return rows
 
 
-def remove_synthetic():
-    for path, row in synthetic_files():
-        assert row["summary"].startswith(PREFIX)
-        path.unlink(missing_ok=True)
+def synthetic():
+    return {row["summary"]: row["key"] for row in host_rows() if str(row.get("summary", "")).startswith(PREFIX)}
 
 
-def real_live_files():
-    return [p for p in STATE.glob("*.json") if p not in {p for p, _ in synthetic_files()}]
+def real_history():
+    raw = (STORE / "history.json").read_text()
+    rows = json.loads(raw) if raw.strip() else []
+    return {row["key"]: hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()
+            for row in rows if not str(row.get("summary", "")).startswith("Dicey synthetic proof")}
 
 
-def history_hashes():
-    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (STATE / "history").glob("*.json")}
+def send(app, suffix, body):
+    command("notify-send", "-a", app, "-t", "1500", PREFIX + suffix, body)
 
 
-def send(suffix, action=False):
-    args = ["notify-send", "-a", "notify-send", "-u", "critical", "-p"]
-    if action:
-        args += ["--wait", "--action=default=Verify"]
-    return subprocess.Popen(args + [PREFIX + suffix, "Synthetic body <b>plain text</b>"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+history = json.loads((STORE / "history.json").read_text() or "[]")
+assert len(history) < 90, "Host history is nearly full; synthetic entries could trim real ones."
+before = real_history()
+mail, chat = "Dicey Proof Mail " + RUN, "Dicey Proof Chat " + RUN
+send(mail, " mail 1", "First synthetic mail")
+send(chat, " chat", "Synthetic chat body <b>bold</b> &amp; plain")
+send(mail, " mail 2", "Second synthetic mail")
+# Chromium labels a site notification with a leading origin anchor; the host lifts it.
+send("Chromium", " site", '<a href="https://news.example.com/">news.example.com</a>Synthetic site body')
+deadline = time.monotonic() + 20
+while len(synthetic()) < 4 and time.monotonic() < deadline:
+    time.sleep(.2)
+keys = synthetic()
+assert len(keys) == 4, keys
+mail_group, chat_group = "app:dicey-proof-mail-" + RUN, "app:dicey-proof-chat-" + RUN
+site_group = "site:news.example.com"
+current = wait(lambda s: s["notifications"]["ready"] and all(k in s["notifications"]["keys"] for k in keys.values()))
+groups = current["notifications"]["groups"]
+assert {mail_group, chat_group, site_group} <= set(groups), groups
+order = current["notifications"]["keys"]
+mail_keys = [keys[PREFIX + " mail 2"], keys[PREFIX + " mail 1"]]
+start = order.index(mail_keys[0])
+assert order[start:start + 2] == mail_keys, order
+print("PASS real host: synthetic app and Chromium site notifications are grouped by app and website.")
 
+command("omarchy-shell", "shell", "summon", PLUGIN, '{"menu":"root","view":"notifications"}')
+wait(lambda s: s.get("home", {}).get("notificationView", {}).get("focused"))
+time.sleep(.6)
+if SCREENSHOT:
+    command("grim", SCREENSHOT)
 
-before = history_hashes()
-senders = []
-try:
-    assert not real_live_files(), "Real popups present; refusing latest-toast tests."
-    command("omarchy-shell", "shell", "summon", PLUGIN, '{"menu":"root","view":"notifications"}')
-    initial = wait(lambda s: s.get("home", {}).get("notificationView", {}).get("focused") and s["notifications"]["ready"])
-    assert initial["enhanced"] and initial["layout"] == "home", initial
-    assert call("paneAction", "notifications:confirmClear") == "unavailable"
-    assert call("paneAction", "notifications:clearHistory") == "unavailable"
-    assert call("paneAction", "notifications:requestClear") == "confirm"
-    wait(lambda s: s["home"]["notificationView"]["confirmingClear"])
-    command("wtype", "-k", "Escape")
-    wait(lambda s: s["opened"] and not s["home"]["notificationView"]["confirmingClear"])
-    print("Notification payload focuses the real feed; Escape cancels clear without deleting.")
+assert call("paneAction", "notifications:remove:" + keys[PREFIX + " chat"]) == "ok"
+assert call("paneAction", "notifications:clearGroup:" + site_group) == "ok"
+current = wait(lambda s: keys[PREFIX + " chat"] not in s["notifications"]["keys"]
+               and site_group not in s["notifications"]["groups"])
+assert all(k in current["notifications"]["keys"] for k in mail_keys)
+assert len(synthetic()) == 4, "Home must not change host history"
+print("PASS remove/clear group hide entries in Home only; host history still holds them.")
 
-    sender = send(" action", action=True)
-    senders.append(sender)
-    wait(lambda s: s["notifications"]["liveCount"] == 1 and s["notifications"]["urgent"])
-    assert synthetic_files(), "Host did not persist synthetic toast"
-    assert not real_live_files(), "Real popup arrived; refusing latest action."
-    remove_synthetic()
-    assert call("paneAction", "notifications:openLatest") == "ok"
-    stdout, stderr = sender.communicate(timeout=10)
-    assert sender.returncode == 0 and "default" in stdout, (stdout, stderr)
-    print("Public latest-toast default action reached the live synthetic sender.")
+command("omarchy-shell", "shell", "hide", PLUGIN)
+command("omarchy", "restart", "shell")
+current = wait(lambda s: s["notifications"]["ready"] and all(k in s["notifications"]["keys"] for k in mail_keys), 40)
+assert keys[PREFIX + " chat"] not in current["notifications"]["keys"] and site_group not in current["notifications"]["groups"]
+print("PASS removals persist across a fresh shell.")
 
-    sender = send(" dismiss")
-    senders.append(sender)
-    sender.communicate(timeout=10)
-    wait(lambda s: s["notifications"]["liveCount"] == 1)
-    assert not real_live_files(), "Real popup arrived; refusing latest dismiss."
-    remove_synthetic()
-    assert call("paneAction", "notifications:dismissLatest") == "ok"
-    wait(lambda s: not s["notifications"]["pending"] and s["notifications"]["liveCount"] == 0)
-    print("Public dismiss removes only the synthetic toast; no history is archived/trimmed.")
-
-    sender = send(" lifecycle")
-    senders.append(sender)
-    sender.communicate(timeout=10)
-    live = wait(lambda s: s["notifications"]["liveCount"] == 1 and s["notifications"]["unread"] > 0)
-    assert call("paneAction", "notifications:read") == "ok"
-    wait(lambda s: s["notifications"]["unread"] == 0)
-    keys = live["notifications"]["keys"]
-    command("wtype", "-k", "Escape")
-    wait(lambda s: not s["opened"])
-    command("omarchy", "restart", "shell")
-    restored = wait(lambda s: s["notifications"]["ready"] and s["notifications"]["liveCount"] == 1)
-    assert restored["notifications"]["unread"] == 0, restored["notifications"]
-    assert restored["notifications"]["keys"] == keys, restored["notifications"]
-    remove_synthetic()
-    command("omarchy-shell", "notifications", "dismiss", PREFIX)
-    print("Synthetic critical toast and read watermark survive a fresh shell; Escape closes Home.")
-    # No destructive or global-setting commands are used here. DND UI/clear
-    # confirmation/deletion are additionally exercised with isolated fixtures.
-finally:
-    remove_synthetic()
-    command("omarchy-shell", "notifications", "dismiss", PREFIX)
-    for sender in senders:
-        if sender.poll() is None:
-            sender.terminate()
-            sender.communicate(timeout=5)
-    command("omarchy-shell", "shell", "hide", PLUGIN)
-    after = history_hashes()
-    # A genuine new notification may add/trim history independently. Any such
-    # concurrent change invalidates this run rather than silently claiming proof.
-    assert before == after, "History changed during proof; inspect before claiming preservation."
-    print("PASS: existing real history files are byte-for-byte unchanged.")
+assert call("paneAction", "notifications:clearGroup:" + mail_group) == "ok"
+wait(lambda s: not any(k in s["notifications"]["keys"] for k in keys.values()))
+after = real_history()
+assert all(after.get(key) == digest for key, digest in before.items()), "A real history entry changed"
+print("PASS real history entries are unchanged; synthetic entries expire from host history within 24 hours.")

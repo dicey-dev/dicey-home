@@ -1,85 +1,91 @@
-# Notification hub (unreleased alpha work)
+# Notification center (unreleased alpha work)
 
 This is work in progress on `main`, not part of the **v0.1.0** pre-notification
-release. Native test coverage below does not imply finished UX or release
-approval. No later release/tag is currently authorized.
+release. No later release/tag is currently authorized.
 
 ## Flow and design
 
-Home's first column is now a readable, newest-first notification feed, not a
-second collection of app shortcuts. The wider column, quiet borders, urgency
-rail and explicit unread dot use the current Omarchy theme. The other three
-groups, application search, stock routes and compact dmenu remain intact.
+Home's first column is a notification center: recent notifications grouped by
+where they came from. It only *shows and tidies* notifications. Pop-ups remain
+Omarchy's (or, separately, a bar plugin's) job; Home never shows, invokes,
+dismisses or replays toasts.
 
-- Click the existing Home bar icon to open the dashboard at Notifications,
-  clearing any launcher query and moving keyboard focus to the feed controls.
-  The stock compact menu's backdrop can consume the first outside click to
-  close itself; click the exposed icon to open the feed. Use Escape or the usual
-  shortcut to close Home.
-  The horizontal icon shows unread count (`99+` at 100), urgent color, and a
-  separate DND pause marker. A vertical bar uses a small status dot and the
-  tooltip reports the count/DND. `!` means the reader/service is not ready.
-- App identity, exact local date/time, live/recent status, urgency, summary and
-  body are plain text. Sender markup is displayed literally, never rendered.
-  Sender images/icons/links are not fetched. Long content is bounded; the feed
-  scrolls independently and the dashboard itself scrolls on smaller screens.
-  New arrivals and live-to-history updates preserve the visible entry/scroll
-  position while reading older messages; the top stays live when already there.
-- **Unread only** filters the feed. **Mark all read** acknowledges the current
-  snapshot without dismissing anything. Opening, Escape, filtering, dismissing
-  a toast or replaying history does not implicitly mark notifications read.
-  Read status is local to Home, not a sender receipt. Timestamp + ID distinguish
-  entries, including ID reuse after shell restart. In-place sender replacements
-  retain their original read status. First use treats retained entries as unread.
-- **DND** changes the host's global setting. Omarchy decides which alerts bypass
-  it and which silenced messages enter history; Home does not override that policy.
-- **Open latest toast** delegates the newest visible toast's default action (or
-  host app-focus fallback); **Dismiss latest toast** archives that toast. They
-  are deliberately *not* row actions. An intervening notification changes the
-  latest target. With no visible toast the host safely returns `none`.
-- **Replay recent** asks the host to replay its recent history as toasts, retaining
-  the host's existing behavior (including replacing current toasts).
-- **Clear history…** first shows a warning that this deletes the host's **shared**
-  history permanently, with Cancel focused by default. Escape cancels this step;
-  another Escape closes Home. Confirmation invokes public `notifications clear`.
-  Live toasts are not cleared, and can subsequently archive into history.
+- Click the Home bar icon to open the dashboard at Notifications with keyboard
+  focus in the list. The bar icon shows the DND pause marker (`Ⅱ`) and `!` when
+  the reader or host service is not ready. There is no count badge.
+- **Grouping.** Each application is one group. A browser notification
+  (Chromium, Chrome, Brave, Edge, Vivaldi, Opera, Helium, Firefox, Zen,
+  LibreWolf) is grouped by **website**, with the browser named under the group
+  title. If an Omarchy web app (`omarchy-launch-webapp <url>` desktop entry)
+  exists for that exact hostname, the group takes the web app's name, e.g.
+  "WhatsApp · web.whatsapp.com · Chromium"; `www.` and the bare hostname are
+  one site. When one website's group has entries from several browsers, each
+  entry names its browser. The browser cannot tell Home whether
+  a notification came from the web app window or an ordinary tab, so both land
+  in the same group. A browser notification without a recognizable origin stays
+  in the browser's own group.
+- Groups are ordered by their newest entry; entries are newest first. The
+  current group's header stays pinned while scrolling a long group.
+- **Removing.** × (or Delete on the selected entry) removes one entry. A group's
+  **Clear** (or Shift+Delete) removes that group; **Clear all** empties the list.
+  Removal only hides entries in Home and persists across restarts. A removal is
+  kept while the host still holds the entry (e.g. a critical toast left on
+  screen) and otherwise forgotten after 48 hours, pruned hourly while the shell
+  runs; at most 1024 removals are remembered. Selection moves to
+  the neighbouring entry. There is no read/unread state.
+- App name, summary, body text, local time, urgency and "on screen" (still a
+  live toast) are plain text. The host's small markup subset is reduced to text;
+  sender images, icons and links are not fetched.
+- **DND** changes the host's global setting via public IPC. Omarchy decides
+  which alerts bypass it and which silenced messages enter history.
 
-Tab/Shift+Tab reach labelled controls with visible focus rings. Escape retains
-the normal query/edit/menu behavior. The notification view cannot be hidden by
-tile editing; obsolete Workspace tile IDs are dropped from saved preferences.
+Tab/Shift+Tab reach labelled controls with visible focus rings; arrows select
+entries, PgUp/PgDn scroll. New arrivals and live-to-history updates preserve the
+visible entry and scroll position while reading older entries.
 
 ## Host boundary and limitations
 
-Supported host: Omarchy 4.0.6-1, Qt 6.12, Quickshell 0.3.2. Its third-party shell
-facade does not provide a notification model or per-entry action API. Home does
-not traverse private service objects or authentication services. It does not
-start another notification server, D-Bus owner, Quickshell process, or daemon.
+Supported host: Omarchy 4.5 (`omarchy.notifications` 2.0.0). Its third-party
+shell facade does not provide a notification model or per-entry action API.
+Home does not traverse private service objects, start another notification
+server, D-Bus owner, Quickshell process or daemon.
 
 One shared QML singleton owns one shell-lifetime `python3 notifications.py
---watch` subprocess. It reads existing host snapshots under
-`~/.local/state/omarchy/notifications/` and `history/`, and the host DND setting
-from `~/.local/state/omarchy/notifications.json`. This HOME-based path deliberately
-matches the tested host; the snapshot format is a compatibility dependency,
-not a promised upstream API. Public `omarchy-shell notifications ping` detects
-service availability; commands use only its documented IPC methods. Polling is
-one second for files and five seconds for service availability. IPC has bounded
-timeouts; reader failure is visible and retried.
+--watch` subprocess. It reads the host's `live.json` and `history.json` under
+`~/.local/state/omarchy/notifications/` once a second and rescans web app
+desktop entries every 30 seconds. This HOME-based path and file format match the
+tested host; they are a compatibility dependency, not a promised upstream API.
+Public `omarchy-shell notifications isDnd`, polled every five seconds, both
+detects the service and reports DND. Commands have bounded timeouts; reader
+failure is visible and retried.
 
-The host retains only ten archived entries, plus current popup files; Home does
-not extend retention. DND can release sender objects, and archived/restarted
-notifications usually have no live sender actions. Therefore there are **no**
-fake per-history-row action/dismiss buttons, arbitrary sender-action enumeration,
-or independently editable history. Stored `execArgv` is never read by Home;
-explicit latest-toast invocation remains the host's responsibility.
+The host keeps history for 24 hours (at most 100 entries) plus current toasts,
+and never persists notifications sent with the `transient` hint. It prunes
+`history.json` only when it writes it, so Home applies the same 24-hour and
+100-entry rule by each entry's `closed_ts` rather than extending retention.
+Entries are identified by the host's row key; a replayed duplicate shows its
+newest copy. An unreadable applications directory only disables web app names.
 
-Reads reject symlinks, FIFOs, oversized/malformed files and inconsistent
-identities; control/bidi-override characters are removed. Each directory scan
-and file read is bounded, with at most 256 merged entries displayed and a warning
-if anything is skipped/truncated. Files can move during reads; the next refresh
-converges without writing or locking the host's files. This is not a sandbox.
+Reads reject symlinks, non-regular and oversized files, and malformed rows;
+control/bidi-override characters are removed. At most 256 entries are shown,
+with a warning if anything is skipped or truncated. Files can change during
+reads; the next refresh converges without writing or locking the host's files.
+This is not a sandbox.
 
-Only `notifications-read.json` (timestamp and boundary IDs, no content) is
+Only `notifications-removed.json` (host keys and removal times, no content) is
 written under `$XDG_STATE_HOME/omarchy/dicey.home/`. Development scopes it to
-`dicey.home.dev`. The singleton stops its subprocesses when unloaded; shell
-restart reloads the host history and Home read watermark. Production deployment
-remains explicit; a source edit does not upgrade a manually copied install.
+`dicey.home.dev`. The singleton stops its subprocess when unloaded.
+
+## Verification
+
+- `tests/run.sh`: reader parsing/grouping/web app mapping, model grouping and
+  removal, release notes.
+- `tests/verify_notification_fixtures.py` (no dev session active): isolated
+  fixture data in the real shell; grouping, pinned headers, scroll
+  preservation, Delete/Shift+Delete, per-entry/group/all removal, DND, empty state.
+- `DICEY_PLUGIN_ID=dicey.home.dev tests/verify_notifications.py` (dev session
+  active): uniquely prefixed synthetic notifications through the real host,
+  app and Chromium-site grouping, removal persisting across a shell restart,
+  real history entries unchanged. Synthetic entries stay in host history until
+  its 24-hour retention drops them. If `notify-send` fails with a symbol lookup
+  error, unset an inherited `LD_LIBRARY_PATH` (e.g. from an AppImage terminal).

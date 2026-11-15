@@ -18,7 +18,7 @@ BarWidget {
     fontFamily: "omarchy"
     labelVisible: false
     fixedWidth: root.vertical ? root.barSize : status.implicitWidth + Style.space(15)
-    tooltipText: "Home notifications · " + (Home.NotificationStore.ready ? Home.NotificationStore.unreadCount + " unread" : "connecting") + (Home.NotificationStore.snapshot.dnd === true ? " · Do not disturb" : "")
+    tooltipText: "Home notifications" + (Home.NotificationStore.ready ? "" : " · connecting") + (Home.NotificationStore.dnd === true ? " · Do not disturb" : "")
     Accessible.name: tooltipText
     horizontalMargin: 7.5
     onPressed: function(button) {
@@ -31,8 +31,8 @@ BarWidget {
       anchors.centerIn: parent
       spacing: Style.space(4)
       Text { text: "\ue900"; color: button.foreground; font.family: "omarchy"; font.pixelSize: button.fontSize }
-      Text { visible: !root.vertical && text.length > 0; text: (Home.NotificationStore.ready ? Home.NotificationStore.badge : "!") + (Home.NotificationStore.snapshot.dnd === true ? " Ⅱ" : ""); color: Home.NotificationStore.urgent ? Commons.Color.urgent : Commons.Color.accent; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.bold: true }
+      Text { visible: !root.vertical && text.length > 0; text: (Home.NotificationStore.ready ? "" : "!") + (Home.NotificationStore.dnd === true ? (Home.NotificationStore.ready ? "Ⅱ" : " Ⅱ") : ""); color: Home.NotificationStore.ready ? Commons.Color.accent : Commons.Color.urgent; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.bold: true }
     }
-    Rectangle { visible: root.vertical && (Home.NotificationStore.unreadCount > 0 || Home.NotificationStore.snapshot.dnd === true); anchors.right: parent.right; anchors.top: parent.top; anchors.margins: Style.space(3); width: Style.space(5); height: width; radius: width / 2; color: Home.NotificationStore.urgent ? Commons.Color.urgent : Commons.Color.accent }
+    Rectangle { visible: root.vertical && (!Home.NotificationStore.ready || Home.NotificationStore.dnd === true); anchors.right: parent.right; anchors.top: parent.top; anchors.margins: Style.space(3); width: Style.space(5); height: width; radius: width / 2; color: Home.NotificationStore.ready ? Commons.Color.accent : Commons.Color.urgent }
   }
 }

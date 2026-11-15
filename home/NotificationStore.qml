@@ -6,38 +6,41 @@ import "NotificationModel.js" as Model
 
 Singleton {
   id: store
-  property var snapshot: ({ready: false, rows: [], dnd: null, warning: false, error: ""})
-  property var readCursor: ({timestamp: 0, keys: []})
-  property bool readReady: false
+  property var snapshot: ({ready: false, rows: [], warning: false, error: ""})
+  property var removedKeys: ({})
+  property bool removedReady: false
   property bool directoryReady: false
-  property bool readDirty: false
+  property bool removedDirty: false
   property bool commandPending: false
   property bool hostAvailable: false
+  property var dnd: null
   property string commandError: ""
-  readonly property var rows: snapshot.rows
-  readonly property bool ready: snapshot.ready && readReady && hostAvailable
-  readonly property int unreadCount: ready ? Model.count(rows, readCursor) : 0
-  readonly property string badge: Model.badge(unreadCount)
-  readonly property bool urgent: ready && rows.some(function(row) { return row.urgency === 2 && Model.unread(row, store.readCursor) })
+  readonly property bool ready: snapshot.ready && removedReady && hostAvailable
+  readonly property var arranged: Model.arrange(Model.visible(snapshot.rows, removedKeys))
+  readonly property var rows: arranged.rows
+  readonly property var groups: arranged.groups
   readonly property string directory: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/omarchy/dicey.home"
-  function isUnread(row) { return Model.unread(row, readCursor) }
-  function markRead() {
+  // Removing only hides an entry in Home: Omarchy's history and live toasts are untouched.
+  function remove(keys) {
     if (!ready) return "loading"
-    readCursor = Model.markRead(rows, readCursor)
-    readDirty = true
-    saveRead()
+    removedKeys = Model.remove(removedKeys, keys, Date.now())
+    removedDirty = true
+    saveRemoved()
     return "ok"
   }
-  function saveRead() {
-    if (readReady && directoryReady && readDirty) {
-      readFile.setText(JSON.stringify(readCursor) + "\n")
-      readDirty = false
+  function removeOne(key) { return rows.some(function(row) { return row.key === key }) ? remove([key]) : "unavailable" }
+  function removeGroup(id) { return Object.prototype.hasOwnProperty.call(groups, id) ? remove(groups[id].keys) : "unavailable" }
+  function removeAll() { return rows.length ? remove(rows.map(function(row) { return row.key })) : "unavailable" }
+  function saveRemoved() {
+    if (removedReady && directoryReady && removedDirty) {
+      removedFile.setText(JSON.stringify(removedKeys) + "\n")
+      removedDirty = false
     }
   }
-  function loadRead(raw) {
-    if (readReady) return
-    try { readCursor = Model.cursor(JSON.parse(raw || "{}")) } catch (error) { readCursor = Model.cursor(null) }
-    readReady = true
+  function loadRemoved(raw) {
+    if (removedReady) return
+    try { removedKeys = Model.removed(JSON.parse(raw || "{}"), Date.now(), null) } catch (error) { removedKeys = ({}) }
+    removedReady = true
   }
   function run(action) {
     var args = Model.command(action)
@@ -50,8 +53,9 @@ Singleton {
   }
   function inspect() {
     // Same-user diagnostics, deliberately excludes private notification text.
-    return {ready: ready, count: rows.length, unread: unreadCount, badge: badge, urgent: urgent,
-      dnd: snapshot.dnd, warning: snapshot.warning, error: snapshot.error || commandError || (!hostAvailable ? "Notification service unavailable." : ""),
+    return {ready: ready, count: rows.length, total: snapshot.rows.length, removed: Object.keys(removedKeys).length,
+      groups: arranged.order, dnd: dnd, warning: snapshot.warning,
+      error: snapshot.error || commandError || (!hostAvailable ? "Notification service unavailable." : ""),
       pending: commandPending, keys: rows.map(function(row) { return row.key }),
       liveCount: rows.filter(function(row) { return row.live }).length}
   }
@@ -61,11 +65,11 @@ Singleton {
     running: true
     stdout: SplitParser {
       onRead: function(line) {
-        try { store.snapshot = JSON.parse(line) } catch (error) { store.snapshot = {ready: false, rows: [], dnd: null, warning: false, error: "Invalid notification snapshot."} }
+        try { store.snapshot = JSON.parse(line) } catch (error) { store.snapshot = {ready: false, rows: [], warning: false, error: "Invalid notification snapshot."} }
       }
     }
     onExited: {
-      store.snapshot = {ready: false, rows: [], dnd: null, warning: false, error: "Notification reader stopped. Reopen after restarting the shell."}
+      store.snapshot = {ready: false, rows: [], warning: false, error: "Notification reader stopped. Reopen after restarting the shell."}
       retry.restart()
     }
   }
@@ -76,34 +80,51 @@ Singleton {
     onExited: function(code) {
       commandTimeout.stop()
       store.commandPending = false
-      if (code !== 0 || ["ok", "on", "off", "none"].indexOf(response.text.trim()) < 0)
-        store.commandError = "The notification service did not accept the command. Try again."
+      var reply = response.text.trim()
+      if (code === 0 && (reply === "on" || reply === "off")) store.dnd = reply === "on"
+      else store.commandError = "The notification service did not accept the command. Try again."
     }
     onRunningChanged: if (running) commandTimeout.restart()
   }
   Timer { id: commandTimeout; interval: 10000; onTriggered: { ipc.signal(15); store.commandError = "Notification command timed out." } }
+  // Public IPC both proves the host service is up and reports Do Not Disturb.
   Process {
     id: probe
-    command: ["omarchy-shell", "notifications", "ping"]
+    command: ["omarchy-shell", "notifications", "isDnd"]
     running: true
     stdout: StdioCollector { id: probeOutput; waitForEnd: true }
-    onExited: function(code) { probeTimeout.stop(); store.hostAvailable = code === 0 && probeOutput.text.trim() === "ok" }
+    onExited: function(code) {
+      probeTimeout.stop()
+      var reply = probeOutput.text.trim()
+      store.hostAvailable = code === 0 && (reply === "on" || reply === "off")
+      if (store.hostAvailable && !store.commandPending) store.dnd = reply === "on"
+    }
     onRunningChanged: if (running) probeTimeout.restart()
   }
   Timer { id: probeTimeout; interval: 4000; onTriggered: { probe.signal(15); store.hostAvailable = false } }
   Timer { interval: 5000; repeat: true; running: true; onTriggered: if (!probe.running) probe.running = true }
+  // Forget removals the host no longer holds, so the file stays small; keys it
+  // still holds (e.g. a critical toast left on screen) are kept.
+  Timer {
+    interval: 3600000; repeat: true; running: store.removedReady && store.snapshot.ready
+    onTriggered: {
+      store.removedKeys = Model.removed(store.removedKeys, Date.now(), store.snapshot.rows.map(function(row) { return row.key }))
+      store.removedDirty = true
+      store.saveRemoved()
+    }
+  }
   Process {
     command: ["mkdir", "-p", store.directory]
     running: true
-    onExited: function(code) { store.directoryReady = code === 0; store.saveRead() }
+    onExited: function(code) { store.directoryReady = code === 0; store.saveRemoved() }
   }
   FileView {
-    id: readFile
-    path: store.directory + "/notifications-read.json"
+    id: removedFile
+    path: store.directory + "/notifications-removed.json"
     atomicWrites: true
     printErrors: false
-    onLoaded: store.loadRead(text())
-    onLoadFailed: store.loadRead("")
-    onSaveFailed: { store.readDirty = true; store.commandError = "Could not save read status. It may reset after a restart." }
+    onLoaded: store.loadRemoved(text())
+    onLoadFailed: store.loadRemoved("")
+    onSaveFailed: { store.removedDirty = true; store.commandError = "Could not save removed notifications. They may reappear after a restart." }
   }
 }

@@ -54,12 +54,13 @@ production files and uses a separate preference ID, but is not a sandbox. Versio
 tooling does not publish/install. The same-user diagnostic IPC exposes current
 menu/search state; it is not a security boundary against other session processes.
 
-## Notification hub (unreleased alpha)
+## Notification center (unreleased alpha)
 
-The notification feed uses bounded, read-only local snapshot ingestion and
-plain-text rendering, stripping control/bidi override characters. No sender
-images, remote URLs, stored argv or live service objects enter the feed. The
-shared singleton starts one shell-owned Python reader, not a notification
-daemon. Public IPC is an explicit command allowlist; the clear-history command
-requires a separate UI confirmation and affects global host history, not just
-Home. Read state contains a watermark/IDs only. See [behavior and limitations](notifications.md).
+The notification center reads the host's `live.json`/`history.json` read-only,
+bounded in size, and renders plain text, stripping markup tags and
+control/bidi override characters. No sender images, remote URLs, stored argv or
+live service objects enter the feed. Desktop entries are scanned (bounded,
+no symlinks) only to map `omarchy-launch-webapp` hostnames to web app names.
+The shared singleton starts one shell-owned Python reader, not a notification
+daemon. The only host command is the public DND IPC (`isDnd`/`setDnd`). Removal
+state contains host keys and removal times only, no content. See [behavior and limitations](notifications.md).

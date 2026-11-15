@@ -19,12 +19,12 @@ tile dashboard covering the entire display and bar, with real activity monitorin
 controls, output volume/mute, a focus timer, and session actions. Layout and tile
 visibility are remembered across opens and shell restarts.
 
-The existing Home bar icon shows an unread count (up to **99+**), urgency and DND
-status. Click it to open Home at **Notifications**. Read the newest live/recent
-entries, filter unread, explicitly mark all read, toggle DND, or use the host's
-latest-toast/replay controls. Clearing shared history requires confirmation;
-opening Home never marks or deletes notifications. See [notification behavior
-and host limitations](docs/notifications.md).
+Click the Home bar icon to open Home at **Notifications**: recent notifications
+grouped by app, with browser notifications grouped by website (and named after
+the matching Omarchy web app, if installed). Remove an entry with ×, clear a
+group or clear everything; this only tidies Home's list and never touches
+Omarchy's history or toasts. The bar icon shows DND status. See [notification
+behavior and host limitations](docs/notifications.md).
 
 Web searches use the default browser's configured search engine, including
 custom URL engines such as Unduck. Preview results come only from that engine;
