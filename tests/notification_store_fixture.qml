@@ -21,7 +21,7 @@ Singleton {
   readonly property var groups: arranged.groups
   function remove(keys) { removedKeys = Model.remove(removedKeys, keys, Date.now()); return "ok" }
   function removeOne(key) { return rows.some(function(row) { return row.key === key }) ? remove([key]) : "unavailable" }
-  function removeGroup(id) { return groups[id] ? remove(groups[id].keys) : "unavailable" }
+  function removeGroup(id) { return Object.prototype.hasOwnProperty.call(groups, id) ? remove(groups[id].keys) : "unavailable" }
   function removeAll() { return rows.length ? remove(rows.map(function(row) { return row.key })) : "unavailable" }
   function entry(key, minutes, app, source, extra) {
     var browser = /^(Chromium|Firefox)$/.test(app) ? app : ""

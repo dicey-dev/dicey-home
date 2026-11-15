@@ -124,6 +124,7 @@ FocusScope {
           required property int index
           width: feed.width - Style.space(8)
           height: details.implicitHeight + Style.space(14)
+          readonly property var group: center.store.groups[entry.model.group]
           Rectangle { anchors.fill: parent; radius: Math.min(Style.cornerRadius, Style.space(4)); color: Util.alpha(Commons.Color.menu.text, 0.06); visible: feed.activeFocus && entry.ListView.isCurrentItem }
           Rectangle { y: Style.space(4); width: Style.space(2); height: parent.height - Style.space(8); color: entry.model.urgency === 2 ? Commons.Color.urgent : Commons.Color.accent; opacity: entry.model.urgency === 2 ? 1 : 0.35 }
           Column {
@@ -134,7 +135,7 @@ FocusScope {
             spacing: Style.space(4)
             Text { width: parent.width; text: entry.model.summary; textFormat: Text.PlainText; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight; color: Commons.Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.body }
             Text { width: parent.width; visible: text.length > 0; text: entry.model.body; textFormat: Text.PlainText; wrapMode: Text.Wrap; maximumLineCount: 4; elide: Text.ElideRight; color: center.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
-            Text { width: parent.width; text: Qt.formatDateTime(new Date(entry.model.timestamp), "d MMM · HH:mm") + (entry.model.urgency === 2 ? " · URGENT" : "") + (entry.model.live ? " · ON SCREEN" : ""); color: entry.model.urgency === 2 ? Commons.Color.urgent : center.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
+            Text { width: parent.width; text: Qt.formatDateTime(new Date(entry.model.timestamp), "d MMM · HH:mm") + (entry.group && entry.group.browsers.length > 1 ? " · " + entry.model.browser.toUpperCase() : "") + (entry.model.urgency === 2 ? " · URGENT" : "") + (entry.model.live ? " · ON SCREEN" : ""); color: entry.model.urgency === 2 ? Commons.Color.urgent : center.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
           }
           CenterButton {
             id: remove
@@ -144,9 +145,9 @@ FocusScope {
             implicitWidth: Style.space(28)
             implicitHeight: Style.space(26)
             Accessible.name: "Remove notification: " + entry.model.summary
-            onClicked: center.action("remove:" + entry.model.key)
+            onClicked: { feed.forceActiveFocus(); center.action("remove:" + entry.model.key) }
           }
-          MouseArea { anchors.fill: details; acceptedButtons: Qt.LeftButton; onClicked: feed.currentIndex = entry.index }
+          MouseArea { anchors.fill: details; acceptedButtons: Qt.LeftButton; onClicked: { feed.currentIndex = entry.index; feed.forceActiveFocus() } }
           Accessible.role: Accessible.StaticText
           Accessible.name: entry.model.groupLabel + ": " + entry.model.summary + ". " + entry.model.body
         }

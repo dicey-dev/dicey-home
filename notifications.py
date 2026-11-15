@@ -19,7 +19,9 @@ import time
 from urllib.parse import urlsplit
 
 MAX_ROWS = 256
-MAX_BYTES = 4 * 1024 * 1024  # Host limits: 100 live x 16 KiB, 100 history x 4 KiB.
+MAX_BYTES = 8 * 1024 * 1024  # Host caps rows in UTF-16 units: 100 live x 16 Ki, 100 history x 4 Ki.
+RETENTION = 24 * 3600  # Host history keeps 24 hours (Store.retain), pruned only on writes.
+HISTORY_LIMIT = 100
 MAX_DESKTOP_FILES = 512
 MAX_DESKTOP_BYTES = 65536
 KEY = re.compile(r"^[A-Za-z0-9_-]{1,120}$")
@@ -90,20 +92,22 @@ def hostname(value):
     return name
 
 
-def slug(value):
-    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "unknown"
+def app_id(value):
+    """A stable group id; names without ASCII letters keep their own text."""
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug if slug and value.isascii() else value.casefold()
 
 
 def group(app, source, webapps):
     """(id, label, kind, browser) for one notification."""
     if BROWSERS.fullmatch(app.strip()):
-        site = hostname(source) if source != app else ""
+        site = (hostname(source) if source != app else "").removeprefix("www.")
         if site:
-            name = webapps.get(site) or webapps.get(site.removeprefix("www."))
+            name = webapps.get(site)
             if name:
                 return "webapp:" + site, name, "webapp", app
-            return "site:" + site, site.removeprefix("www."), "site", app
-    return "app:" + slug(app), app, "app", ""
+            return "site:" + site, site, "site", app
+    return "app:" + app_id(app), app, "app", ""
 
 
 def desktop_webapps(directory):
@@ -112,8 +116,8 @@ def desktop_webapps(directory):
     try:
         with os.scandir(directory) as entries:
             names = sorted(entry.name for entry in entries if entry.name.endswith(".desktop"))
-    except (FileNotFoundError, NotADirectoryError):
-        return found
+    except OSError:
+        return found  # Web app names are optional; never disable the reader.
     for name in names[:MAX_DESKTOP_FILES]:
         try:
             content = read_bytes(directory / name, MAX_DESKTOP_BYTES).decode("utf-8")
@@ -132,7 +136,7 @@ def desktop_webapps(directory):
                     match = WEBAPP.search(line)
                     url = match[1] if match else ""
         try:
-            site = hostname(urlsplit(url).hostname or "") if url else ""
+            site = (hostname(urlsplit(url).hostname or "") if url else "").removeprefix("www.")
         except ValueError:
             site = ""
         if label and site and site not in found:
@@ -140,13 +144,16 @@ def desktop_webapps(directory):
     return found
 
 
+def finite(value):
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+
+
 def row_from(value, live, now_ms, webapps):
     if not isinstance(value, dict):
         raise ValueError("Not an object")
     key, ts = value.get("key"), value.get("ts")
-    if (not isinstance(key, str) or not KEY.fullmatch(key) or isinstance(ts, bool)
-            or not isinstance(ts, (int, float)) or not math.isfinite(ts) or ts <= 0
-            or ts * 1000 > now_ms + 60000):
+    if (not isinstance(key, str) or not KEY.fullmatch(key) or not finite(ts) or ts <= 0
+            or ts * 1000 > now_ms + 60000 or (not live and not finite(value.get("closed_ts")))):
         raise ValueError("Invalid identity")
     app = text(value.get("app"), 160).strip() or "Unknown app"
     source = text(value.get("source"), 253).strip()
@@ -165,15 +172,24 @@ def snapshot(state, applications, webapps=None):
     rows = {}
     warning = False
     try:
-        # History first, so a row both closing and live (mid-write) shows as live.
+        cutoff = now_ms / 1000 - RETENTION
+        # History (newest first) before live, so a row both closing and live
+        # (mid-write) shows as live; a replayed key keeps its newest copy.
         for live, name in ((False, "history.json"), (True, "live.json")):
+            kept = 0
             for value in read_rows(state / "notifications" / name):
                 try:
                     row = row_from(value, live, now_ms, webapps)
-                    rows[row["key"]] = row
                 except ValueError:
                     warning = True
-    except (OSError, ValueError, UnicodeError):
+                    continue
+                if not live:
+                    # The host prunes history only when it writes; mirror its retention.
+                    if row["key"] in rows or value["closed_ts"] <= cutoff or kept >= HISTORY_LIMIT:
+                        continue
+                    kept += 1
+                rows[row["key"]] = row
+    except (OSError, ValueError, UnicodeError, RecursionError):
         return {"ready": False, "rows": [], "warning": False,
                 "error": "Notification history is unavailable. The host service may be disabled or incompatible."}
     ordered = sorted(rows.values(), key=lambda row: (row["timestamp"], row["key"]), reverse=True)

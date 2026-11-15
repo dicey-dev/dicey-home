@@ -29,7 +29,7 @@ Singleton {
     return "ok"
   }
   function removeOne(key) { return rows.some(function(row) { return row.key === key }) ? remove([key]) : "unavailable" }
-  function removeGroup(id) { return groups[id] ? remove(groups[id].keys) : "unavailable" }
+  function removeGroup(id) { return Object.prototype.hasOwnProperty.call(groups, id) ? remove(groups[id].keys) : "unavailable" }
   function removeAll() { return rows.length ? remove(rows.map(function(row) { return row.key })) : "unavailable" }
   function saveRemoved() {
     if (removedReady && directoryReady && removedDirty) {
@@ -39,7 +39,7 @@ Singleton {
   }
   function loadRemoved(raw) {
     if (removedReady) return
-    try { removedKeys = Model.removed(JSON.parse(raw || "{}"), Date.now()) } catch (error) { removedKeys = ({}) }
+    try { removedKeys = Model.removed(JSON.parse(raw || "{}"), Date.now(), null) } catch (error) { removedKeys = ({}) }
     removedReady = true
   }
   function run(action) {
@@ -103,8 +103,16 @@ Singleton {
   }
   Timer { id: probeTimeout; interval: 4000; onTriggered: { probe.signal(15); store.hostAvailable = false } }
   Timer { interval: 5000; repeat: true; running: true; onTriggered: if (!probe.running) probe.running = true }
-  // Forget removals the host no longer retains, so the file stays small.
-  Timer { interval: 3600000; repeat: true; running: store.removedReady; onTriggered: { store.removedKeys = Model.removed(store.removedKeys, Date.now()); store.removedDirty = true; store.saveRemoved() } }
+  // Forget removals the host no longer holds, so the file stays small; keys it
+  // still holds (e.g. a critical toast left on screen) are kept.
+  Timer {
+    interval: 3600000; repeat: true; running: store.removedReady && store.snapshot.ready
+    onTriggered: {
+      store.removedKeys = Model.removed(store.removedKeys, Date.now(), store.snapshot.rows.map(function(row) { return row.key }))
+      store.removedDirty = true
+      store.saveRemoved()
+    }
+  }
   Process {
     command: ["mkdir", "-p", store.directory]
     running: true

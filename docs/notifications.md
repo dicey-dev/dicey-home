@@ -18,7 +18,9 @@ dismisses or replays toasts.
   LibreWolf) is grouped by **website**, with the browser named under the group
   title. If an Omarchy web app (`omarchy-launch-webapp <url>` desktop entry)
   exists for that exact hostname, the group takes the web app's name, e.g.
-  "WhatsApp · web.whatsapp.com · Chromium". The browser cannot tell Home whether
+  "WhatsApp · web.whatsapp.com · Chromium"; `www.` and the bare hostname are
+  one site. When one website's group has entries from several browsers, each
+  entry names its browser. The browser cannot tell Home whether
   a notification came from the web app window or an ordinary tab, so both land
   in the same group. A browser notification without a recognizable origin stays
   in the browser's own group.
@@ -26,9 +28,10 @@ dismisses or replays toasts.
   current group's header stays pinned while scrolling a long group.
 - **Removing.** × (or Delete on the selected entry) removes one entry. A group's
   **Clear** (or Shift+Delete) removes that group; **Clear all** empties the list.
-  Removal only hides entries in Home. It persists across restarts and is
-  forgotten after 48 hours, by which time the host has dropped the entry.
-  There is no read/unread state.
+  Removal only hides entries in Home and persists across restarts. A removal is
+  kept while the host still holds the entry (e.g. a critical toast left on
+  screen) and forgotten 48 hours after the host drops it. Selection moves to
+  the neighbouring entry. There is no read/unread state.
 - App name, summary, body text, local time, urgency and "on screen" (still a
   live toast) are plain text. The host's small markup subset is reduced to text;
   sender images, icons and links are not fetched.
@@ -56,8 +59,11 @@ detects the service and reports DND. Commands have bounded timeouts; reader
 failure is visible and retried.
 
 The host keeps history for 24 hours (at most 100 entries) plus current toasts,
-and never persists notifications sent with the `transient` hint. Home does not
-extend that retention. Entries are identified by the host's row key.
+and never persists notifications sent with the `transient` hint. It prunes
+`history.json` only when it writes it, so Home applies the same 24-hour and
+100-entry rule by each entry's `closed_ts` rather than extending retention.
+Entries are identified by the host's row key; a replayed duplicate shows its
+newest copy. An unreadable applications directory only disables web app names.
 
 Reads reject symlinks, non-regular and oversized files, and malformed rows;
 control/bidi-override characters are removed. At most 256 entries are shown,

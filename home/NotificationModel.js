@@ -2,20 +2,26 @@
 // which entries were removed from its own list (host key -> removal time).
 var REMEMBER_MS = 48 * 3600 * 1000  // Host history keeps 24 hours.
 var MAX_REMOVED = 1024
-function removed(value, now) {
-  var out = {}
-  if (!value || typeof value !== "object" || Array.isArray(value)) return out
-  var keys = Object.keys(value).filter(function(key) {
+// present: keys the host still holds, refreshed so they never reappear; null
+// skips age expiry (before the first snapshot).
+function removed(value, now, present) {
+  var times = {}
+  if (!value || typeof value !== "object" || Array.isArray(value)) return times
+  Object.keys(value).forEach(function(key) {
     var at = value[key]
-    return /^[A-Za-z0-9_-]{1,120}$/.test(key) && typeof at === "number" && isFinite(at) && at > now - REMEMBER_MS && at <= now + 60000
-  }).sort(function(a, b) { return value[b] - value[a] }).slice(0, MAX_REMOVED)
-  keys.forEach(function(key) { out[key] = value[key] })
+    if (!/^[A-Za-z0-9_-]{1,120}$/.test(key) || typeof at !== "number" || !isFinite(at) || at > now + 60000) return
+    if (present && present.indexOf(key) >= 0) times[key] = now
+    else if (!present || at > now - REMEMBER_MS) times[key] = at
+  })
+  var out = {}
+  Object.keys(times).sort(function(a, b) { return times[b] - times[a] }).slice(0, MAX_REMOVED)
+    .forEach(function(key) { out[key] = times[key] })
   return out
 }
 function remove(previous, keys, now) {
   var out = Object.assign({}, previous)
   keys.forEach(function(key) { if (typeof key === "string") out[key] = now })
-  return removed(out, now)
+  return removed(out, now, null)
 }
 function visible(rows, removedKeys) {
   return rows.filter(function(row) { return !Object.prototype.hasOwnProperty.call(removedKeys, row.key) })
@@ -27,9 +33,10 @@ function arrange(rows) {
   rows.forEach(function(row) {
     var group = groups[row.group]
     if (!group) {
-      group = groups[row.group] = {id: row.group, label: row.groupLabel, kind: row.groupKind, browser: row.browser, newest: row.timestamp, rows: []}
+      group = groups[row.group] = {id: row.group, label: row.groupLabel, kind: row.groupKind, browsers: [], newest: row.timestamp, rows: []}
       order.push(group)
     }
+    if (row.browser && group.browsers.indexOf(row.browser) < 0) group.browsers.push(row.browser)
     group.newest = Math.max(group.newest, row.timestamp)
     group.rows.push(row)
   })
@@ -37,7 +44,7 @@ function arrange(rows) {
   var flat = [], info = {}
   order.forEach(function(group) {
     group.rows.sort(function(a, b) { return b.timestamp - a.timestamp || (a.key < b.key ? 1 : -1) })
-    info[group.id] = {label: group.label, kind: group.kind, browser: group.browser, count: group.rows.length,
+    info[group.id] = {label: group.label, kind: group.kind, browsers: group.browsers.sort(), count: group.rows.length,
       keys: group.rows.map(function(row) { return row.key })}
     flat = flat.concat(group.rows)
   })
@@ -45,13 +52,19 @@ function arrange(rows) {
 }
 function caption(group) {
   if (!group) return ""
-  if (group.kind === "webapp") return group.id.slice(7) + " · " + group.browser
-  if (group.kind === "site") return group.browser
+  var browsers = (group.browsers || []).join(", ")
+  if (group.kind === "webapp") return group.id.slice(7) + " · " + browsers
+  if (group.kind === "site") return browsers
   return ""
 }
 function sync(model, rows) {
   // Keep the ListModel and surviving rows alive: replacing an array model
   // resets ListView's scroll/current item on every notification refresh.
+  // Remove departed rows in place first, so selection moves to a neighbour.
+  var wanted = {}
+  rows.forEach(function(row) { wanted[row.key] = true })
+  for (var r = model.count - 1; r >= 0; r--)
+    if (!Object.prototype.hasOwnProperty.call(wanted, model.get(r).key)) model.remove(r, 1)
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i]
     if (i >= model.count || model.get(i).key !== row.key) {

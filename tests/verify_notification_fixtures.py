@@ -89,9 +89,12 @@ with tempfile.TemporaryDirectory(prefix="dicey-notification-ui-", dir="/tmp/open
         print("PASS native scroll/current-key preservation across arrival + live-to-history update.")
         # Delete removes the selected entry; Shift+Delete clears its group.
         selected = after["currentKey"]
+        order = json.loads(call("inspect"))["notifications"]["keys"]
+        successor = order[order.index(selected) + 1]
         command("wtype", "-k", "Delete")
         state = wait(lambda s: s["notifications"]["count"] == 60)
         assert selected not in state["notifications"]["keys"], state["notifications"]
+        assert state["home"]["notificationView"]["feed"]["currentKey"] == successor, (successor, state["home"]["notificationView"]["feed"])
         before_groups = state["notifications"]["groups"]  # Includes the fixture arrival's group.
         command("wtype", "-M", "shift", "-k", "Delete", "-m", "shift")
         state = wait(lambda s: len(s["notifications"]["groups"]) == len(before_groups) - 1)
@@ -99,10 +102,13 @@ with tempfile.TemporaryDirectory(prefix="dicey-notification-ui-", dir="/tmp/open
         print("PASS keyboard removal: Delete removes one entry, Shift+Delete clears that entry's group.")
         assert call("paneAction", "notifications:remove:missing") == "unavailable"
         assert call("paneAction", "notifications:clearGroup:app:missing") == "unavailable"
-        assert call("paneAction", "notifications:remove:synthetic-0") == "ok"
-        assert call("paneAction", "notifications:clearGroup:site:news.example.com") == "ok"
-        state = wait(lambda s: "site:news.example.com" not in s["notifications"]["groups"])
-        assert "synthetic-0" not in state["notifications"]["keys"]
+        assert call("paneAction", "notifications:clearGroup:__proto__") == "unavailable"
+        first = state["notifications"]["keys"][0]
+        assert call("paneAction", "notifications:remove:" + first) == "ok"
+        site = next(g for g in state["notifications"]["groups"] if g.startswith("site:"))
+        assert call("paneAction", "notifications:clearGroup:" + site) == "ok"
+        state = wait(lambda s: site not in s["notifications"]["groups"])
+        assert first not in state["notifications"]["keys"]
         call("paneAction", "notifications:dndOff")
         wait(lambda s: s["notifications"]["dnd"] is False)
         screenshot = os.environ.get("DICEY_FIXTURE_SCREENSHOT")

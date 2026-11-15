@@ -6,13 +6,16 @@ const row = (key, timestamp, group, extra = {}) => ({key, timestamp, group, grou
 // Removal memory: validated, bounded and forgotten after the host's retention.
 assert.deepEqual(model.removed(null, now), {});
 assert.deepEqual(model.removed([], now), {});
-assert.deepEqual(model.removed({good: now - 1000, 'bad key': now, old: now - 49 * 3600 * 1000, future: now + 3600000, nan: NaN, str: '1'}, now), {good: now - 1000});
+const stored = {good: now - 1000, 'bad key': now, old: now - 49 * 3600 * 1000, held: now - 72 * 3600 * 1000, future: now + 3600000, nan: NaN, str: '1'};
+// Before the first snapshot nothing expires; afterwards only keys the host no longer holds do.
+assert.deepEqual(model.removed(stored, now, null), {good: now - 1000, old: now - 49 * 3600 * 1000, held: now - 72 * 3600 * 1000});
+assert.deepEqual(model.removed(stored, now, ['held']), {held: now, good: now - 1000});
 let removed = model.remove({}, ['a', 7, 'b'], now);
 assert.deepEqual(removed, {a: now, b: now});
 const many = {};
 for (let i = 0; i < 1100; i++) many['k' + i] = now - i;
-assert.equal(Object.keys(model.removed(many, now)).length, 1024);
-assert.ok('k0' in model.removed(many, now) && !('k1099' in model.removed(many, now)));
+assert.equal(Object.keys(model.removed(many, now, [])).length, 1024);
+assert.ok('k0' in model.removed(many, now, []) && !('k1099' in model.removed(many, now, [])));
 
 // Visible rows exclude removed keys, and prototype keys are not special.
 const rows = [row('a', 5, 'app:mail'), row('b', 9, 'site:example.com', {groupKind: 'site', browser: 'Chromium'}),
@@ -23,12 +26,16 @@ assert.deepEqual(model.visible(rows, removed).map(r => r.key), ['c', 'constructo
 const arranged = model.arrange(rows);
 assert.deepEqual(arranged.order, ['site:example.com', 'app:mail', 'app:term']);
 assert.deepEqual(arranged.rows.map(r => r.key), ['b', 'c', 'a', 'constructor']);
-assert.deepEqual(arranged.groups['app:mail'], {label: 'mail', kind: 'app', browser: '', count: 2, keys: ['c', 'a']});
+assert.deepEqual(arranged.groups['app:mail'], {label: 'mail', kind: 'app', browsers: [], count: 2, keys: ['c', 'a']});
+// One website seen from two browsers names both.
+const mixed = model.arrange([row('x', 2, 'site:example.com', {browser: 'Firefox'}), row('y', 1, 'site:example.com', {browser: 'Chromium'})]);
+assert.deepEqual(mixed.groups['site:example.com'].browsers, ['Chromium', 'Firefox']);
+assert.equal(model.caption(Object.assign({id: 'site:example.com'}, mixed.groups['site:example.com'])), 'Chromium, Firefox');
 assert.deepEqual(model.arrange([]), {rows: [], groups: {}, order: []});
 
-assert.equal(model.caption({id: 'webapp:web.whatsapp.com', kind: 'webapp', browser: 'Chromium'}), 'web.whatsapp.com · Chromium');
-assert.equal(model.caption({id: 'site:example.com', kind: 'site', browser: 'Firefox'}), 'Firefox');
-assert.equal(model.caption({id: 'app:mail', kind: 'app', browser: ''}), '');
+assert.equal(model.caption({id: 'webapp:web.whatsapp.com', kind: 'webapp', browsers: ['Chromium']}), 'web.whatsapp.com · Chromium');
+assert.equal(model.caption({id: 'site:example.com', kind: 'site', browsers: ['Firefox']}), 'Firefox');
+assert.equal(model.caption({id: 'app:mail', kind: 'app', browsers: []}), '');
 assert.equal(model.caption(null), '');
 
 // Only DND reaches the host; nothing in Home invokes, dismisses or clears host state.
@@ -60,6 +67,14 @@ assert.deepEqual(stable.operations, ['insert', 'set']);
 model.sync(stable, [{key: 'b', live: false}, {key: 'a', live: false}]);
 assert.equal(stable.get(0), b);
 assert.equal(stable.get(1), a);
+// Removing a middle row removes it in place: survivors keep their order and
+// objects, so ListView's selection moves to the neighbour, not the list's end.
+model.sync(stable, [{key: 'a'}, {key: 'b'}, {key: 'c'}, {key: 'd'}]);
+const [ra, rc, rd] = [stable.get(0), stable.get(2), stable.get(3)];
+stable.operations = [];
+model.sync(stable, [{key: 'a'}, {key: 'c'}, {key: 'd'}]);
+assert.deepEqual(stable.operations, ['remove']);
+assert.equal(stable.get(0), ra); assert.equal(stable.get(1), rc); assert.equal(stable.get(2), rd);
 model.sync(stable, []);
 assert.equal(stable.count, 0);
 console.log('Notification grouping/removal/identity and public command tests passed.');

@@ -24,7 +24,7 @@ class NotificationTests(unittest.TestCase):
 
     def row(self, key="nkey1", ts=None, **extra):
         value = {"key": key, "ts": self.now - 60 if ts is None else ts, "app": "Synthetic app",
-                 "summary": "Hello", "body": "World", "source": "", "urgency": 1}
+                 "summary": "Hello", "body": "World", "source": "", "urgency": 1, "closed_ts": self.now - 30}
         value.update(extra)
         return value
 
@@ -44,7 +44,9 @@ class NotificationTests(unittest.TestCase):
     def test_merge_order_live_wins_and_allowlisted_fields(self):
         self.write("history.json", [self.row("old", self.now - 120, execArgv='["evil"]', closed_ts=self.now),
                                     self.row("both", self.now - 30, body="Archived copy", closed_ts=self.now)])
-        self.write("live.json", [self.row("both", self.now - 30, body="Live copy")])
+        live = self.row("both", self.now - 30, body="Live copy")
+        del live["closed_ts"]  # Live rows have none.
+        self.write("live.json", [live])
         rows = self.snapshot()["rows"]
         self.assertEqual([row["key"] for row in rows], ["both", "old"])
         self.assertTrue(rows[0]["live"])
@@ -61,12 +63,16 @@ class NotificationTests(unittest.TestCase):
             self.row("d", app="Google Chrome", source="Google Chrome"),  # Unlifted: stays the browser app.
             self.row("e", app="Chromium", source="127.0.0.1"),
             self.row("f", app="NotABrowser", source="example.com"),
+            self.row("g", app="Chromium", source="example.com"),
+            self.row("h", app="微信"), self.row("i", app="Телеграм"),
         ])
         rows = {row["key"]: row for row in self.snapshot({"web.whatsapp.com": "WhatsApp"})["rows"]}
         self.assertEqual((rows["a"]["group"], rows["a"]["groupLabel"], rows["a"]["groupKind"], rows["a"]["browser"]),
                          ("app:slack-desktop", "Slack Desktop", "app", ""))
         self.assertEqual((rows["b"]["group"], rows["b"]["groupLabel"], rows["b"]["groupKind"], rows["b"]["browser"]),
-                         ("site:www.example.com", "example.com", "site", "Chromium"))
+                         ("site:example.com", "example.com", "site", "Chromium"))
+        self.assertEqual(rows["g"]["group"], rows["b"]["group"])  # www. and bare host are one site.
+        self.assertEqual((rows["h"]["group"], rows["i"]["group"]), ("app:微信", "app:телеграм"))
         self.assertEqual((rows["c"]["group"], rows["c"]["groupLabel"], rows["c"]["groupKind"], rows["c"]["browser"]),
                          ("webapp:web.whatsapp.com", "WhatsApp", "webapp", "Firefox"))
         self.assertEqual(rows["d"]["group"], "app:google-chrome")
@@ -79,12 +85,39 @@ class NotificationTests(unittest.TestCase):
         (self.apps / "Chat.desktop").write_text(
             '[Desktop Entry]\nName=Chat\nExec=chromium --app="https://chat.example.org/x"\n')
         (self.apps / "Term.desktop").write_text("[Desktop Entry]\nName=Term\nExec=alacritty\n")
+        (self.apps / "Www.desktop").write_text("[Desktop Entry]\nName=Www\nExec=omarchy-launch-webapp https://www.site.example/\n")
         (self.apps / "Bad.desktop").write_text("[Desktop Entry]\nName=Bad\nExec=omarchy-launch-webapp https://10.0.0.1/\n")
         (self.apps / "Big.desktop").write_bytes(b"x" * (notifications.MAX_DESKTOP_BYTES + 1))
         (self.apps / "Link.desktop").symlink_to(self.apps / "WhatsApp.desktop")
         self.assertEqual(notifications.desktop_webapps(self.apps),
-                         {"web.whatsapp.com": "WhatsApp", "chat.example.org": "Chat"})
+                         {"web.whatsapp.com": "WhatsApp", "chat.example.org": "Chat", "site.example": "Www"})
         self.assertEqual(notifications.desktop_webapps(self.apps / "missing"), {})
+
+    def test_unreadable_applications_do_not_disable_the_reader(self):
+        self.write("history.json", [self.row()])
+        with patch.object(notifications.os, "scandir", side_effect=PermissionError):
+            self.assertEqual(notifications.desktop_webapps(self.apps), {})
+            self.assertEqual(len(notifications.snapshot(self.state, self.apps)["rows"]), 1)
+
+    def test_history_retention_duplicates_and_limit(self):
+        self.write("history.json", [
+            self.row("dup", self.now - 10, summary="Newest copy", closed_ts=self.now - 5),
+            self.row("fresh", closed_ts=self.now - 3600),
+            self.row("dup", self.now - 20, summary="Older copy", closed_ts=self.now - 15),
+            self.row("expired", self.now - 30 * 3600, closed_ts=self.now - 25 * 3600),
+            self.row("unclosed", closed_ts=None),
+        ])
+        result = self.snapshot()
+        self.assertEqual({row["key"]: row["summary"] for row in result["rows"]}, {"dup": "Newest copy", "fresh": "Hello"})
+        self.assertTrue(result["warning"])  # The row without closed_ts.
+        self.write("history.json", [self.row(f"k{i}", self.now - i) for i in range(120)])
+        self.assertEqual(len(self.snapshot()["rows"]), notifications.HISTORY_LIMIT)
+
+    def test_deeply_nested_store_is_unavailable_not_a_crash(self):
+        (self.store / "history.json").write_text("[" * 100000)
+        result = self.snapshot()
+        self.assertFalse(result["ready"])
+        self.assertTrue(result["error"])
 
     def test_markup_is_reduced_to_text(self):
         self.write("history.json", [self.row(summary="<b>literal</b>", body="<b>Bold</b> &amp; <a href='x'>link</a><br/>next <3")])
