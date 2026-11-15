@@ -1,26 +1,42 @@
 const assert = require('node:assert/strict');
 const model = require('../home/NotificationModel.js');
-const rows = [{key: '100-1', timestamp: 100}, {key: '100-2', timestamp: 100}];
-let read = model.cursor(null);
-assert.equal(model.count(rows, read), 2);
-read = model.markRead(rows, read);
-assert.equal(model.count(rows, read), 0);
-assert.equal(model.count([...rows, {key: '100-3', timestamp: 100}], read), 1);
-assert.equal(model.count([...rows, {key: '101-1', timestamp: 101}], read), 1);
-assert.deepEqual(model.markRead([], read), read);
-assert.deepEqual(model.cursor({timestamp: NaN}), {timestamp: 0, keys: []});
-assert.deepEqual(model.cursor({timestamp: -1}), {timestamp: 0, keys: []});
-assert.equal(model.badge(0), '');
-assert.equal(model.badge(99), '99');
-assert.equal(model.badge(100), '99+');
-assert.deepEqual(model.command('dismissLatest'), ['dismissOne']);
-assert.deepEqual(model.command('openLatest'), ['invokeLast']);
-assert.deepEqual(model.command('clearHistory'), ['clear']);
+const now = 10 * 24 * 3600 * 1000;
+const row = (key, timestamp, group, extra = {}) => ({key, timestamp, group, groupLabel: group.split(':')[1], groupKind: group.split(':')[0], browser: '', ...extra});
+
+// Removal memory: validated, bounded and forgotten after the host's retention.
+assert.deepEqual(model.removed(null, now), {});
+assert.deepEqual(model.removed([], now), {});
+assert.deepEqual(model.removed({good: now - 1000, 'bad key': now, old: now - 49 * 3600 * 1000, future: now + 3600000, nan: NaN, str: '1'}, now), {good: now - 1000});
+let removed = model.remove({}, ['a', 7, 'b'], now);
+assert.deepEqual(removed, {a: now, b: now});
+const many = {};
+for (let i = 0; i < 1100; i++) many['k' + i] = now - i;
+assert.equal(Object.keys(model.removed(many, now)).length, 1024);
+assert.ok('k0' in model.removed(many, now) && !('k1099' in model.removed(many, now)));
+
+// Visible rows exclude removed keys, and prototype keys are not special.
+const rows = [row('a', 5, 'app:mail'), row('b', 9, 'site:example.com', {groupKind: 'site', browser: 'Chromium'}),
+  row('c', 7, 'app:mail'), row('constructor', 1, 'app:term')];
+assert.deepEqual(model.visible(rows, removed).map(r => r.key), ['c', 'constructor']);
+
+// Groups ordered by newest entry; entries newest first and contiguous.
+const arranged = model.arrange(rows);
+assert.deepEqual(arranged.order, ['site:example.com', 'app:mail', 'app:term']);
+assert.deepEqual(arranged.rows.map(r => r.key), ['b', 'c', 'a', 'constructor']);
+assert.deepEqual(arranged.groups['app:mail'], {label: 'mail', kind: 'app', browser: '', count: 2, keys: ['c', 'a']});
+assert.deepEqual(model.arrange([]), {rows: [], groups: {}, order: []});
+
+assert.equal(model.caption({id: 'webapp:web.whatsapp.com', kind: 'webapp', browser: 'Chromium'}), 'web.whatsapp.com · Chromium');
+assert.equal(model.caption({id: 'site:example.com', kind: 'site', browser: 'Firefox'}), 'Firefox');
+assert.equal(model.caption({id: 'app:mail', kind: 'app', browser: ''}), '');
+assert.equal(model.caption(null), '');
+
+// Only DND reaches the host; nothing in Home invokes, dismisses or clears host state.
 assert.deepEqual(model.command('dndOn'), ['setDnd', 'on']);
-assert.equal(model.command('arbitrary-command'), null);
-assert.equal(model.command('dismiss;rm'), null);
-assert.equal(model.command('__proto__'), null);
-assert.equal(model.command('toString'), null);
+assert.deepEqual(model.command('dndOff'), ['setDnd', 'off']);
+for (const name of ['clearHistory', 'dismissLatest', 'openLatest', 'replay', 'arbitrary-command', 'dismiss;rm', '__proto__', 'toString'])
+  assert.equal(model.command(name), null);
+
 // A stable model changes individual rows rather than clearing/replacing them.
 const stable = {
   values: [], operations: [],
@@ -44,7 +60,6 @@ assert.deepEqual(stable.operations, ['insert', 'set']);
 model.sync(stable, [{key: 'b', live: false}, {key: 'a', live: false}]);
 assert.equal(stable.get(0), b);
 assert.equal(stable.get(1), a);
-assert.deepEqual(stable.values.map(row => row.key), ['b', 'a']);
 model.sync(stable, []);
 assert.equal(stable.count, 0);
-console.log('Notification read/count/identity and public command tests passed.');
+console.log('Notification grouping/removal/identity and public command tests passed.');

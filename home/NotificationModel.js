@@ -1,20 +1,54 @@
-// Read state only: notification content/history remains owned by Omarchy.
-function cursor(value) {
-  if (!value || typeof value.timestamp !== "number" || !isFinite(value.timestamp) || value.timestamp < 0) return {timestamp: 0, keys: []}
-  return {timestamp: value.timestamp, keys: Array.isArray(value.keys) ? value.keys.filter(function(key) { return typeof key === "string" }).slice(0, 256) : []}
+// Notification content/history remains owned by Omarchy. Home only remembers
+// which entries were removed from its own list (host key -> removal time).
+var REMEMBER_MS = 48 * 3600 * 1000  // Host history keeps 24 hours.
+var MAX_REMOVED = 1024
+function removed(value, now) {
+  var out = {}
+  if (!value || typeof value !== "object" || Array.isArray(value)) return out
+  var keys = Object.keys(value).filter(function(key) {
+    var at = value[key]
+    return /^[A-Za-z0-9_-]{1,120}$/.test(key) && typeof at === "number" && isFinite(at) && at > now - REMEMBER_MS && at <= now + 60000
+  }).sort(function(a, b) { return value[b] - value[a] }).slice(0, MAX_REMOVED)
+  keys.forEach(function(key) { out[key] = value[key] })
+  return out
 }
-function unread(row, read) {
-  return row.timestamp > read.timestamp || (row.timestamp === read.timestamp && read.keys.indexOf(row.key) < 0)
+function remove(previous, keys, now) {
+  var out = Object.assign({}, previous)
+  keys.forEach(function(key) { if (typeof key === "string") out[key] = now })
+  return removed(out, now)
 }
-function markRead(rows, previous) {
-  var timestamp = previous.timestamp
-  rows.forEach(function(row) { timestamp = Math.max(timestamp, row.timestamp) })
-  var keys = timestamp === previous.timestamp ? previous.keys.slice() : []
-  rows.forEach(function(row) { if (row.timestamp === timestamp && keys.indexOf(row.key) < 0) keys.push(row.key) })
-  return {timestamp: timestamp, keys: keys.slice(-256)}
+function visible(rows, removedKeys) {
+  return rows.filter(function(row) { return !Object.prototype.hasOwnProperty.call(removedKeys, row.key) })
 }
-function count(rows, read) { return rows.filter(function(row) { return unread(row, read) }).length }
-function badge(count) { return count > 99 ? "99+" : count > 0 ? String(count) : "" }
+// Groups ordered by their newest entry, entries newest first, so a ListView
+// section per group stays contiguous.
+function arrange(rows) {
+  var groups = {}, order = []
+  rows.forEach(function(row) {
+    var group = groups[row.group]
+    if (!group) {
+      group = groups[row.group] = {id: row.group, label: row.groupLabel, kind: row.groupKind, browser: row.browser, newest: row.timestamp, rows: []}
+      order.push(group)
+    }
+    group.newest = Math.max(group.newest, row.timestamp)
+    group.rows.push(row)
+  })
+  order.sort(function(a, b) { return b.newest - a.newest || (a.id < b.id ? -1 : 1) })
+  var flat = [], info = {}
+  order.forEach(function(group) {
+    group.rows.sort(function(a, b) { return b.timestamp - a.timestamp || (a.key < b.key ? 1 : -1) })
+    info[group.id] = {label: group.label, kind: group.kind, browser: group.browser, count: group.rows.length,
+      keys: group.rows.map(function(row) { return row.key })}
+    flat = flat.concat(group.rows)
+  })
+  return {rows: flat, groups: info, order: order.map(function(group) { return group.id })}
+}
+function caption(group) {
+  if (!group) return ""
+  if (group.kind === "webapp") return group.id.slice(7) + " · " + group.browser
+  if (group.kind === "site") return group.browser
+  return ""
+}
 function sync(model, rows) {
   // Keep the ListModel and surviving rows alive: replacing an array model
   // resets ListView's scroll/current item on every notification refresh.
@@ -34,8 +68,7 @@ function sync(model, rows) {
   if (model.count > rows.length) model.remove(rows.length, model.count - rows.length)
 }
 function command(action) {
-  var commands = {dndOn: ["setDnd", "on"], dndOff: ["setDnd", "off"], replay: ["showHistory"],
-    dismissLatest: ["dismissOne"], openLatest: ["invokeLast"], clearHistory: ["clear"]}
+  var commands = {dndOn: ["setDnd", "on"], dndOff: ["setDnd", "off"]}
   return Object.prototype.hasOwnProperty.call(commands, action) ? commands[action] : null
 }
-if (typeof module !== "undefined") module.exports = {cursor: cursor, unread: unread, markRead: markRead, count: count, badge: badge, sync: sync, command: command}
+if (typeof module !== "undefined") module.exports = {removed: removed, remove: remove, visible: visible, arrange: arrange, caption: caption, sync: sync, command: command}

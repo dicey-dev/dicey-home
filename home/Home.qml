@@ -30,7 +30,7 @@ FocusScope {
   focus: active
   onActiveChanged: {
     if (active) { syncFilter(); portrait.refresh(); Qt.callLater(focusSearch) }
-    else { if (applyFilter) applyFilter.stop(); editing = false; notifications.reset() }
+    else { if (applyFilter) applyFilter.stop(); editing = false }
   }
   onMenuChanged: Qt.callLater(syncFilter)
   function syncFilter() {
@@ -127,8 +127,7 @@ FocusScope {
       if (!event.isAutoRepeat && controller) { flushFilter(); controller.toggleHome() }
       event.accepted = true
     } else if (event.key === Qt.Key_Escape) {
-      if (notifications.confirmingClear) notifications.reset()
-      else if (editing) editing = false
+      if (editing) editing = false
       else if (query) { applyFilter.stop(); search.text = ""; menu.setFilter("") }
       else if (allApps) menu.setActiveMenu("root", false)
       else menu.cancel()
@@ -187,7 +186,7 @@ FocusScope {
       resultPublications: menu ? menu.diceyControlPublishCount : 0,
       liveResultDelegates: resultDelegateCount(),
       appIcons: loadedIcons(),
-      notificationView: {focused: notifications.activeFocus, confirmingClear: notifications.confirmingClear, unreadOnly: notifications.unreadOnly, width: notifications.width, height: notifications.height, feed: notifications.inspectFeed()},
+      notificationView: {focused: notifications.activeFocus, width: notifications.width, height: notifications.height, feed: notifications.inspectFeed()},
       geometry: {width: width, height: height, viewportHeight: viewport.height, dashboardHeight: board.height, tileUnit: unit}}
   }
 
@@ -511,7 +510,7 @@ FocusScope {
   RowLayout {
     anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
     anchors.margins: Style.space(18)
-    Text { text: notifications.activeFocus ? "Tab controls   PgUp/PgDn feed   / search   esc close" : "↑↓←→ tiles   ↵ open   / search   esc close"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
+    Text { text: notifications.activeFocus ? "Tab controls   ↑↓ select   del remove   / search   esc close" : "↑↓←→ tiles   ↵ open   / search   esc close"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
     Text { visible: home.width >= Style.space(780); text: "CONTROL PANE / LIVE SERVICES"; color: home.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
   }
 }

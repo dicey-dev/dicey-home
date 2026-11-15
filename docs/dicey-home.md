@@ -22,7 +22,7 @@ tile surface fills the entire display, covering the bar as well as the workspace
 Colors, typography, spacing, and rounding follow the global theme.
 
 The four groups are **Notifications**, **The machine**, **In the flow**, and **Make
-space**. The notification feed replaces the old daily-tool Workspace shortcuts;
+space**. The notification center (grouped by app and website) replaces the old daily-tool Workspace shortcuts;
 applications remain available through search and **All apps**. **All apps** displays the stock
 application library as tiles. Search uses the original ranking, routes,
 calculator, and browser-default web search. Enter in search opens the first

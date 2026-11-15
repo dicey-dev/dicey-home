@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the release version or bump manifest/changelog together; never publish."""
+"""Check the release version or bump manifest/changelog/release notes together; never publish."""
 import argparse
 from datetime import date
 import json
@@ -34,6 +34,9 @@ def main():
     if not releases or releases[0] != current:
         parser.error("The first changelog release must match manifest.json")
     if args.action == "check":
+        missing = [v for v in releases if not (ROOT / "docs/releases" / f"v{v}.md").is_file()]
+        if missing:
+            parser.error("Missing release notes: " + ", ".join(f"docs/releases/v{v}.md" for v in missing))
         status = "unreleased development; last release " if "\n## [Unreleased]" in changelog else "release "
         print(f"{manifest['id']} {current} ({status}v{current})")
         return
@@ -42,10 +45,17 @@ def main():
     version = bumped(current, args.action)
     heading = changelog.index("\n## [")
     updated = changelog[:heading] + f"\n## [{version}] - {date.today().isoformat()}\n\n- {args.note}\n" + changelog[heading:]
+    notes = ROOT / "docs/releases" / f"v{version}.md"
+    if notes.exists():
+        parser.error(f"{notes.relative_to(ROOT)} already exists")
     manifest["version"] = version
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     changelog_path.write_text(updated)
-    print(f"{current} -> {version}; review, test and commit before tagging v{version}.")
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text(f"# {manifest.get('name', manifest['id'])} v{version}\n\nReleased {date.today().isoformat()}.\n\n"
+                     f"## Highlights\n\n- {args.note}\n\n"
+                     "<!-- Expand from CHANGELOG.md [Unreleased]: user-visible changes, upgrade notes, known limitations. -->\n")
+    print(f"{current} -> {version}; edit {notes.relative_to(ROOT)}, review, test and commit before tagging v{version}.")
 
 
 if __name__ == "__main__":
