@@ -30,7 +30,8 @@ dismisses or replays toasts.
   **Clear** (or Shift+Delete) removes that group; **Clear all** empties the list.
   Removal only hides entries in Home and persists across restarts. A removal is
   kept while the host still holds the entry (e.g. a critical toast left on
-  screen) and forgotten 48 hours after the host drops it. Selection moves to
+  screen) and otherwise forgotten after 48 hours, pruned hourly while the shell
+  runs; at most 1024 removals are remembered. Selection moves to
   the neighbouring entry. There is no read/unread state.
 - App name, summary, body text, local time, urgency and "on screen" (still a
   live toast) are plain text. The host's small markup subset is reduced to text;

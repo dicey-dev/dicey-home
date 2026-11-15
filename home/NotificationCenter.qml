@@ -115,7 +115,7 @@ FocusScope {
               Text { width: parent.width; text: header.info ? header.info.label + "  " + header.info.count : ""; textFormat: Text.PlainText; elide: Text.ElideRight; color: Commons.Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption; font.weight: Font.DemiBold }
               Text { width: parent.width; visible: text.length > 0; text: Model.caption(header.info ? Object.assign({id: header.section}, header.info) : null).toUpperCase(); textFormat: Text.PlainText; elide: Text.ElideRight; color: center.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.caption }
             }
-            CenterButton { id: clearGroup; text: "Clear"; implicitHeight: Style.space(26); Accessible.name: "Remove all notifications from " + (header.info ? header.info.label : "this source"); onClicked: center.action("clearGroup:" + header.section) }
+            CenterButton { id: clearGroup; text: "Clear"; implicitHeight: Style.space(26); Accessible.name: "Remove all notifications from " + (header.info ? header.info.label : "this source"); onClicked: { feed.forceActiveFocus(); center.action("clearGroup:" + header.section); if (!feedModel.count) center.focusFeed() } }
           }
         }
         delegate: Item {

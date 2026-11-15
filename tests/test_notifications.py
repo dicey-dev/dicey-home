@@ -72,6 +72,7 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual((rows["b"]["group"], rows["b"]["groupLabel"], rows["b"]["groupKind"], rows["b"]["browser"]),
                          ("site:example.com", "example.com", "site", "Chromium"))
         self.assertEqual(rows["g"]["group"], rows["b"]["group"])  # www. and bare host are one site.
+        self.assertEqual(notifications.site_of("www.com"), "www.com")
         self.assertEqual((rows["h"]["group"], rows["i"]["group"]), ("app:微信", "app:телеграм"))
         self.assertEqual((rows["c"]["group"], rows["c"]["groupLabel"], rows["c"]["groupKind"], rows["c"]["browser"]),
                          ("webapp:web.whatsapp.com", "WhatsApp", "webapp", "Firefox"))

@@ -98,10 +98,16 @@ def app_id(value):
     return slug if slug and value.isascii() else value.casefold()
 
 
+def site_of(name):
+    """A hostname with a leading www. merged into its site (but www.com stays)."""
+    short = name.removeprefix("www.")
+    return short if "." in short else name
+
+
 def group(app, source, webapps):
     """(id, label, kind, browser) for one notification."""
     if BROWSERS.fullmatch(app.strip()):
-        site = (hostname(source) if source != app else "").removeprefix("www.")
+        site = site_of(hostname(source) if source != app else "")
         if site:
             name = webapps.get(site)
             if name:
@@ -136,7 +142,7 @@ def desktop_webapps(directory):
                     match = WEBAPP.search(line)
                     url = match[1] if match else ""
         try:
-            site = (hostname(urlsplit(url).hostname or "") if url else "").removeprefix("www.")
+            site = site_of(hostname(urlsplit(url).hostname or "") if url else "")
         except ValueError:
             site = ""
         if label and site and site not in found:
