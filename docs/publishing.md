@@ -89,7 +89,26 @@ Only the pre-notification v0.1.0 alpha release remains. Existing clones may
 diverge; do not force-reset installed local edits. Preserve them and deliberately
 re-clone/migrate if needed. This is a one-time correction, not a release policy.
 
-No private preview is required; the marketplace can use its fallback image.
+## Preview and screenshots
+
+`preview.png` (1600x900, 16:9) is the marketplace card/detail image; the
+marketplace accepts a root `preview.png|jpg|jpeg|webp|avif` up to 40 MP and
+50 MB, cover-crops cards (about 720 px) and fits detail views within 1600 px.
+`docs/screenshots/*.png` (1920x1080, plus a small bar-icon strip) illustrate
+the README. They show the dashboard, the notification feed with the clear
+confirmation, search, All apps, Edit tiles and the bar icon's unread/read/DND
+states, all captured back to back so the clock and data agree.
+
+They are rendered offscreen from this repository's QML in a separate
+Quickshell process, never from the live desktop: the user name is a placeholder
+with no portrait, notifications are synthetic snapshot files, media is a
+generated sample track on a private D-Bus session, and the app grid uses a
+fixed set of stock desktop entries. Activity readings are real but anonymous.
+For the 2026-11-25 capture, `Color.*` theme references were qualified as
+`Commons.Color.*` in the temporary render copy only (see the README's known
+issues). Before replacing an image, check it contains no notification text,
+window titles, user names, e-mail addresses, URLs or paths from a real session,
+and strip metadata (`magick in.png -strip out.png`).
 Marketplace validation and a static baseline are not a security certification.
 Browser configuration remains read-only, but typed search queries can reach the
 configured provider; users should read the privacy disclosure before enabling.

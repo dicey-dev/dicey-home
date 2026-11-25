@@ -9,6 +9,8 @@ last released baseline; changes under Unreleased are not a new release.
 - Work in progress: replace Workspace shortcuts with a notification hub and
   unread/DND indicator on the Home bar icon. This still has rough edges and has
   not been tagged or released.
+- Documentation: README screenshots, a marketplace `preview.png` and known
+  issues observed on newer Omarchy hosts.
 
 ## [0.1.0] - 2026-11-04
 
