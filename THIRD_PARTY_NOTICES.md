@@ -41,3 +41,9 @@ Qt, Quickshell, Omarchy and system commands are separately installed runtime
 dependencies. User avatars, browser databases, MPRIS artwork, app icons and
 theme fonts are read from the host, not distributed as repository assets.
 The HTML mockup is original illustrative code and is not a shipped web runtime.
+
+`preview.png` and `docs/screenshots/` are renders of this plugin's own QML with
+sample data. Application icons visible in them come from the capture host's
+installed icon themes and applications and remain the marks of their respective
+owners; text is set in the theme's JetBrains Mono Nerd Font (SIL OFL 1.1). The
+images are documentation, not distributed runtime assets.
